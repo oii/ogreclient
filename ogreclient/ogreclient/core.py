@@ -453,6 +453,24 @@ def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
     if len(ebooks_to_upload) == 0:
         return 0
 
+    @retry(times=3)
+    def upload_single_book(connection, ebook_obj):
+        try:
+            connection.upload(
+                'upload',
+                ebook_obj,
+                data={
+                    'ebook_id': ebook_obj.ebook_id,
+                    'file_hash': ebook_obj.file_hash,
+                    'format': ebook_obj.format,
+                },
+            )
+
+        except RequestError as e:
+            raise UploadError(ebook_obj, inner_excp=e)
+        except IOError as e:
+            raise UploadError(ebook_obj, inner_excp=e)
+
     # grammatically correct messages are nice
     plural = 's' if len(ebooks_to_upload) > 1 else ''
 
@@ -468,8 +486,7 @@ def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
         # TODO progress bar the uploads
         # https://gitlab.com/sigmavirus24/toolbelt/blob/master/examples/monitor/progress_bar.py
 
-        # failed uploads are retried three times;
-        # a total fail will raise the last exception
+        # failed uploads are retried three times; total fail will raise the last exception
         try:
             upload_single_book(connection, ebook_obj)
 
@@ -500,25 +517,6 @@ def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
         prntr.info('Please run another sync', success=True)
 
     return success
-
-
-@retry(times=3)
-def upload_single_book(connection, ebook_obj):
-    try:
-        connection.upload(
-            'upload',
-            ebook_obj,
-            data={
-                'ebook_id': ebook_obj.ebook_id,
-                'file_hash': ebook_obj.file_hash,
-                'format': ebook_obj.format,
-            },
-        )
-
-    except RequestError as e:
-        raise UploadError(ebook_obj, inner_excp=e)
-    except IOError as e:
-        raise UploadError(ebook_obj, inner_excp=e)
 
 
 def send_logs(connection, errord_list):
