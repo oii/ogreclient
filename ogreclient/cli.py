@@ -74,8 +74,15 @@ def entrypoint():
     sys.exit(ret)
 
 
+class OgreArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+
 def parse_command_line(conf):
-    parser = argparse.ArgumentParser(
+    parser = OgreArgumentParser(
         description='O.G.R.E. client application'
     )
     subparsers = parser.add_subparsers()
