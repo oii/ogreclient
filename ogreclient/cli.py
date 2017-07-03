@@ -193,6 +193,9 @@ def parse_command_line(conf):
 
     args = parser.parse_args()
 
+    if not hasattr(args, 'mode'):
+        parser.error('You must pass a subcommand to ogre')
+
     if args.mode == 'sync' and args.verbose and args.quiet:
         parser.error('You cannot specify --verbose and --quiet together!')
 
