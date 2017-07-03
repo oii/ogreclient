@@ -5,18 +5,11 @@ import sys
 
 import ogreclient
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
-
-packages = [
-    'ogreclient',
-]
 
 requires = [
     'requests'
@@ -33,13 +26,13 @@ setup(
     author='Matt Black',
     author_email='dev@mafro.net',
     url='http://github.com/oii/ogre',
-    packages=packages,
+    packages=find_packages(exclude=['tests']),
     package_data={'': ['LICENSE']},
-    package_dir={'': '.'},
-    include_package_data=True,
     install_requires=requires,
     entry_points = {
-        'console_scripts': ['ogre=ogreclient.cli:entrypoint']
+        'console_scripts': [
+            'ogre=ogreclient.cli:entrypoint'
+        ]
     },
     license=open('LICENSE').read(),
     classifiers=(
