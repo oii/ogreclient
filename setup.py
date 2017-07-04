@@ -12,7 +12,8 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 requires = [
-    'requests'
+    'requests',
+    'click',
 ]
 
 if sys.version_info < (2, 7):
@@ -31,7 +32,7 @@ setup(
     install_requires=requires,
     entry_points = {
         'console_scripts': [
-            'ogre=ogreclient.cli:entrypoint'
+            'ogre=ogreclient.cli:cli'
         ]
     },
     license=open('LICENSE').read(),

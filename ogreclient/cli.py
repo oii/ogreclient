@@ -1,61 +1,89 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import argparse
+import json
 import logging
 import os
 import sys
 
-from ogreclient import __version__, exceptions
+import click
+click.disable_unicode_literals_warning = True
+
+from ogreclient import exceptions
 from ogreclient.config import read_config
-from ogreclient.core.ebook_obj import EbookObject
-from ogreclient.main import scan_and_show_stats, sync
-from ogreclient.prereqs import setup_ogreclient
+from ogreclient.core import scan_and_show_stats, sync as core_sync
+from ogreclient.dedrm import decrypt, DRM
+from ogreclient.ebook_obj import EbookObject
+from ogreclient import prereqs
+from ogreclient.printer import CliPrinter
 from ogreclient.providers import PROVIDERS
-from ogreclient.utils.dedrm import decrypt, DRM
-from ogreclient.utils.printer import CliPrinter
 
 
 prntr = CliPrinter.get_printer()
 
 
-def entrypoint():
+class OgreArgs(object):
+    def __init__(self, verbose, debug, quiet):
+        self.verbose = verbose
+        self.debug = debug
+        self.quiet = quiet
+
+        # debug implies verbose
+        if debug:
+            self.verbose = True
+
+    def to_dict(self):
+        return {
+            'verbose': self.verbose,
+            'debug': self.debug,
+            'quiet': self.quiet,
+        }
+
+
+@click.group()
+@click.version_option()
+@click.option('--verbose', '-v', is_flag=True,
+              help='Produce lots of output')
+@click.option('--debug', '-d', is_flag=True,
+              help='Display debug logging')
+@click.option('--quiet', '-q', is_flag=True,
+              help="Don't produce any output")
+@click.pass_context
+def cli(ctx, verbose=False, debug=False, quiet=False):
+    """
+    O.G.R.E. client application
+    """
+    if verbose and quiet:
+        raise click.UsageError('You cannot specify --verbose and --quiet together!')
+
+    # global CLI printer
+    CliPrinter.init(log_output=debug)
+
+    if debug:
+        prntr.level = logging.DEBUG
+
+    # log at warning level in quiet mode
+    if quiet:
+        prntr.level = logging.WARNING
+        prntr.notimer = True
+
+    # Entrypoint for click application
+    ctx.obj = OgreArgs(verbose=verbose, debug=debug, quiet=quiet)
+
+
+def entrypoint2():
     ret = False
 
     try:
-        # quick config load
-        conf = read_config()
 
-        # setup and run argparse
-        args = parse_command_line(conf)
-
-        # global CLI printer
-        CliPrinter.init(log_output=args.debug)
-
-        if args.debug:
-            prntr.level = logging.DEBUG
-
-        # log at warning level in quiet mode
-        if args.quiet:
-            prntr.level = logging.WARNING
-            prntr.notimer = True
-
-        # no timer during init command
-        if args.mode == 'init':
-            prntr.notimer = True
-
-        # run some checks and create some config variables
-        conf = setup_ogreclient(args, conf)
 
         if conf is not None:
             ret = main(conf, args)
 
-    except exceptions.ConfigSetupError as e:
-        prntr.error('Failed setting up ogre', excp=e)
-    except exceptions.OgreWarning as e:
+    except OgreWarning as e:
         prntr.error(e)
         ret = 1
-    except exceptions.OgreException as e:
+    except OgreException as e:
         prntr.error('An exception occurred in ogre', excp=e)
         ret = 1
     except KeyboardInterrupt:
@@ -71,184 +99,62 @@ def entrypoint():
     sys.exit(ret)
 
 
-class OgreArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
-        sys.stderr.write('error: %s\n' % message)
-        self.print_help()
-        sys.exit(2)
+# # set ogreserver params which apply to sync & scan
+# for p in (psync, pscan):
+#     for provider, data in PROVIDERS.items():
+#         if 'has_{}'.format(provider) in conf:
+#             p.add_argument(
+#                 '--ignore-{}'.format(provider), action='store_true',
+#                 help='Ignore ebooks in {}'.format(data['friendly']))
 
 
-def parse_command_line(conf):
-    parser = OgreArgumentParser(
-        description='O.G.R.E. client application'
+@cli.command()
+@click.option('--host', help='Override the default server host of oii.ogre.yt')
+@click.option('--username', '-u',
+              help='Your O.G.R.E. username. You can also set the environment variable $OGRE_USER')
+@click.option('--password', '-p',
+              help='Your O.G.R.E. password. You can also set the environment variable $OGRE_PASS')
+@click.pass_obj
+def init(cargs, host=None, username=None, password=None):
+    '''
+    Initialise your OGRE client install (checks into OGRE server)
+    '''
+    # no timer during init command
+    prntr.notimer = True
+
+    # run some checks and setup application
+    prereqs.setup_ogreclient(
+        host=host,
+        username=username,
+        password=password,
     )
-    subparsers = parser.add_subparsers()
 
-    # print the current sesame version
-    parser.add_argument(
-        '--version', action='version',
-        version='sesame {}'.format(__version__),
-        help='Print the current Sesame version')
-
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument(
-        '--verbose', '-v', action='store_true',
-        help='Produce lots of output')
-    parent_parser.add_argument(
-        '--debug', action='store_true',
-        help='Print debug information on error')
-    parent_parser.add_argument(
-        '--quiet', '-q', action='store_true',
-        help="Don't produce any output")
-    parent_parser.add_argument(
-        '--skip-cache', action='store_true',
-        help='Ignore the local cache; useful for debugging')
+    instructions = [
+        'You will need to use Kindle for Mac to download ALL the books manually :/',
+        'Then run:',
+        '    ogre sync',
+    ]
+    prntr.info('Getting started:', extra=instructions)
 
 
-    # setup parser for init command
-    pinit = subparsers.add_parser('init',
-        parents=[parent_parser],
-        help='Initialise your OGRE client install (contacts OGRE server)',
-    )
-    pinit.set_defaults(mode='init')
+@cli.command()
+@click.argument('filepath', type=click.Path(exists=True, dir_okay=False, readable=True))
+@click.option('--output-dir', '-O', help='Extract files into a specific directory')
+@click.pass_obj
+def dedrm(cargs, filepath, output_dir=None):
+    '''
+    FILEPATH - Ebook to be decrypted
+    '''
+    # run some checks and setup application
+    conf = prereqs.setup_ogreclient()
 
-
-    # setup parser for sync command
-    psync = subparsers.add_parser('sync',
-        parents=[parent_parser],
-        help='Synchronise with the OGRE server',
-    )
-    psync.set_defaults(mode='sync')
-
-    for p in (psync, pinit):
-        p.add_argument(
-            '--host',
-            help='Override the default server host of oii.ogre.yt')
-        p.add_argument(
-            '--username', '-u',
-            help=('Your O.G.R.E. username. '
-                  'You can also set the environment variable $OGRE_USER'))
-        p.add_argument(
-            '--password', '-p',
-            help=('Your O.G.R.E. password. '
-                  'You can also set the environment variable $OGRE_PASS'))
-
-    psync.add_argument(
-        '--no-drm', action='store_true',
-        help="Disable DRM removal during sync")
-    psync.add_argument(
-        '--dry-run', '-d', action='store_true',
-        help="Dry run the sync; don't actually upload anything to the server")
-
-
-    # setup parser for scan command
-    pscan = subparsers.add_parser('scan',
-        parents=[parent_parser],
-        help='Scan your computer for ebooks and see some statistics',
-    )
-    pscan.set_defaults(mode='scan')
-
-
-    # set ogreserver params which apply to sync & scan
-    for p in (psync, pscan):
-        for provider, data in PROVIDERS.iteritems():
-            if 'has_{}'.format(provider) in conf:
-                p.add_argument(
-                    '--ignore-{}'.format(provider), action='store_true',
-                    help='Ignore ebooks in {}'.format(data['friendly']))
-
-        p.add_argument(
-            '--ebook-home', '-H',
-            help=('The directory where you keep your ebooks. '
-                  'You can also set the environment variable $OGRE_HOME'))
-
-
-    # setup parser for dedrm command
-    pdedrm = subparsers.add_parser('dedrm',
-        parents=[parent_parser],
-        help='Strip a single ebook of DRM',
-    )
-    pdedrm.set_defaults(mode='dedrm')
-    pdedrm.add_argument(
-        'inputfile',
-        help='Ebook to be decrypted')
-    pdedrm.add_argument(
-        '-O', '--output-dir', default=os.getcwd(),
-        help='Extract files into a specific directory')
-
-
-    # setup parser for info command
-    pinfo = subparsers.add_parser('info',
-        parents=[parent_parser],
-        help="Display an ebook's info",
-    )
-    pinfo.set_defaults(mode='info')
-    pinfo.add_argument(
-        'inputfile',
-        help='Ebook for which to display info')
-
-
-    args = parser.parse_args()
-
-    if not hasattr(args, 'mode'):
-        parser.error('You must pass a subcommand to ogre')
-
-    if args.mode == 'sync' and args.verbose and args.quiet:
-        parser.error('You cannot specify --verbose and --quiet together!')
-
-    return args
-
-
-def main(conf, args):
-    # setup config for sync
-    conf.update({
-        'debug': args.debug,
-        'skip_cache': args.skip_cache,
-        'verbose': True if args.debug is True else args.verbose,
-    })
-
-    ret = None
-
-    if args.mode == 'init':
-        instructions = [
-            'You will need to use Kindle for Mac to download ALL the books manually :/',
-            'Then run:',
-            '    ogre sync',
-        ]
-        prntr.info('Getting started:', extra=instructions)
-
-    elif args.mode == 'info':
-        # display metadata from a single book
-        ret = display_info(conf, args.inputfile)
-
-    elif args.mode == 'dedrm':
-        # decrypt a single book
-        ret = dedrm_single_ebook(conf, args.inputfile, args.output_dir)
-
-    elif args.mode == 'scan':
-        # scan for books and display library stats
-        ret = run_scan(conf)
-
-    elif args.mode == 'sync':
-        # run ogreclient
-        conf['no_drm'] = args.no_drm
-        ret = run_sync(conf)
-
-        # print lonely output for quiet mode
-        if args.quiet:
-            prntr.warning("Sync'd {} ebooks".format(ret))
-
-    return ret
-
-
-def dedrm_single_ebook(conf, inputfile, output_dir):
-    filename, ext = os.path.splitext(inputfile)
+    _, ext = os.path.splitext(filepath)
 
     try:
-        prntr.info('Decrypting ebook {}'.format(os.path.basename(inputfile)))
+        prntr.info('Decrypting ebook {}'.format(os.path.basename(filepath)))
 
         state, decrypted_filepath = decrypt(
-            inputfile, ext, conf['config_dir'], output_dir=output_dir
+            filepath, ext, conf['config_dir'], output_dir=output_dir
         )
         prntr.info('Book decrypted at:', extra=decrypted_filepath, success=True)
 
@@ -262,13 +168,53 @@ def dedrm_single_ebook(conf, inputfile, output_dir):
         return 1
 
 
-def display_info(conf, filepath):
-    ebook_obj = EbookObject(filepath)
-    ebook_obj.get_metadata(conf)
-    prntr.info('Book meta', extra=ebook_obj.meta)
+@cli.command()
+@click.argument('filepath', type=click.Path(exists=True, dir_okay=False, readable=True))
+@click.pass_obj
+def info(cargs, filepath):
+    '''
+    Display an ebook's info
+
+    FILEPATH - Ebook for which to display info
+    '''
+    # get the current filesystem encoding
+    fs_encoding = sys.getfilesystemencoding()
+
+    conf = read_config()
+
+    ebook_obj = EbookObject(conf, filepath.decode(fs_encoding))
+    ebook_obj.get_metadata()
+    prntr.info('Book meta', extra=json.dumps(ebook_obj.meta, indent=2))
 
 
-def run_scan(conf):
+@cli.command()
+@click.option('--host', help='Override the default server host of oii.ogre.yt')
+@click.option('--username', '-u',
+              help='Your O.G.R.E. username. You can also set the environment variable $OGRE_USER')
+@click.option('--password', '-p',
+              help='Your O.G.R.E. password. You can also set the environment variable $OGRE_PASS')
+@click.option('--ebook-home', '-H', type=click.Path(exists=True, file_okay=False, readable=True),
+              help=('The directory where you keep your ebooks. '
+                    'You can also set the environment variable $OGRE_HOME'))
+@click.option('--skip-cache', is_flag=True,
+              help='Ignore the local cache (useful for debugging)')
+@click.pass_obj
+def scan(cargs, host=None, username=None, password=None, ebook_home=None, skip_cache=False):
+    '''
+    Scan your computer for ebooks and see some statistics
+    '''
+    # run some checks and setup application
+    conf = prereqs.setup_ogreclient(
+        host=host,
+        username=username,
+        password=password,
+        ebook_home=ebook_home,
+    )
+
+    # merge CLI params into config object
+    conf.update(cargs.to_dict())
+    conf['skip_cache'] = skip_cache
+
     ret = False
 
     try:
@@ -283,11 +229,44 @@ def run_scan(conf):
     return ret
 
 
-def run_sync(conf):
+@cli.command()
+@click.option('--host', help='Override the default server host of oii.ogre.yt')
+@click.option('--username', '-u',
+              help='Your O.G.R.E. username. You can also set the environment variable $OGRE_USER')
+@click.option('--password', '-p',
+              help='Your O.G.R.E. password. You can also set the environment variable $OGRE_PASS')
+@click.option('--ebook-home', '-H', type=click.Path(exists=True, file_okay=False, readable=True),
+              help=('The directory where you keep your ebooks. '
+                    'You can also set the environment variable $OGRE_HOME'))
+@click.option('--skip-cache', is_flag=True,
+              help='Ignore the local cache (useful for debugging)')
+@click.option('--no-drm', is_flag=True,
+              help="Disable DRM removal during sync; don't install DeDRM tools")
+@click.option('--dry-run', '-d', is_flag=True,
+              help="Dry run the sync; don't actually upload anything to the server")
+@click.pass_obj
+def sync(cargs, host=None, username=None, password=None, ebook_home=None, skip_cache=False, no_drm=False, dry_run=False):
+    '''
+    Synchronise with the OGRE server
+    '''
+    # run some checks and setup application
+    conf = prereqs.setup_ogreclient(
+        host=host,
+        username=username,
+        password=password,
+        ebook_home=ebook_home,
+    )
+
+    # merge CLI params into config object
+    conf.update(cargs.to_dict())
+    conf['skip_cache'] = skip_cache
+    conf['no_drm'] = no_drm
+    conf['dry_run'] = dry_run
+
     uploaded_count = 0
 
     try:
-        uploaded_count = sync(conf)
+        uploaded_count = core_sync(conf)
 
     # print messages on error
     except (exceptions.AuthError, exceptions.SyncError, exceptions.UploadError) as e:
@@ -299,9 +278,14 @@ def run_sync(conf):
     except Exception as e:
         prntr.error('Something went very wrong.', excp=e)
 
+    # print lonely output for quiet mode
+    if cargs.quiet:
+        prntr.warning("Sync'd {} ebooks".format(uploaded_count))
+
+
     return uploaded_count
 
 
 # entrypoint for pyinstaller
 if __name__ == '__main__':
-    entrypoint()
+    cli()

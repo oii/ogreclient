@@ -64,9 +64,6 @@ class OgreserverDownError(RequestError):
         )
 
 
-class ConfigSetupError(OgreException):
-    pass
-
 class NoEbooksError(OgreWarning):
     def __init__(self):
         super(NoEbooksError, self).__init__('No ebooks found.. Cannot continue!')

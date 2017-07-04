@@ -13,8 +13,8 @@ from dedrm import PLUGIN_VERSION as DEDRM_PLUGIN_VERSION
 
 from ogreclient import exceptions, OGRE_PROD_HOST
 from ogreclient.core.ebook_obj import EbookObject
-from ogreclient.config import deserialize_defs, write_config
-from ogreclient.providers import PROVIDERS, find_ebook_providers
+from ogreclient.config import deserialize_defs, read_config, write_config
+from ogreclient.providers import find_ebook_providers
 from ogreclient.utils.cache import Cache
 from ogreclient.utils.connection import OgreConnection
 from ogreclient.utils.dedrm import init_keys
@@ -24,16 +24,22 @@ from ogreclient.utils.printer import CliPrinter
 prntr = CliPrinter.get_printer()
 
 
-def setup_ogreclient(args, conf):
+def setup_ogreclient(host=None, username=None, password=None, ebook_home=None):
+    # read previous config
+    conf = read_config()
+
     check_calibre_exists(conf)
 
-    # not all commands need ogreserver
-    if hasattr(args, 'host'):
-        setup_ogreserver_connection_and_get_definitions(args, conf)
+    # find ebook providers
+    setup_providers(conf, ebook_home)
 
-    # all commands execpt dedrm need providers
-    if args.mode in ('init', 'sync', 'stats', 'scan'):
-        setup_providers(args, conf)
+    # setup connection to ogreserver
+    setup_connection_and_get_definitions(
+        conf,
+        host=host,
+        username=username,
+        password=password,
+    )
 
     # write out this config for next run
     write_config(conf)
@@ -42,11 +48,11 @@ def setup_ogreclient(args, conf):
     init_cache(conf)
 
     # check dedrm is working
-    dedrm_check(args, conf)
+    dedrm_check(conf)
 
-    if args.mode == 'stats' and 'username' not in conf:
-        # supply a default username during stats queries
-        conf['username'] = 'oc'
+    #if args.mode == 'stats' and 'username' not in conf:
+    #    # supply a default username during stats queries
+    #    conf['username'] = 'oc'
 
     # return config object
     return conf
@@ -107,14 +113,19 @@ def check_calibre_exists(conf):
     EbookObject.calibre_ebook_meta_bin = conf['calibre_ebook_meta_bin']
 
 
-def setup_ogreserver_connection_and_get_definitions(args, conf):
+def setup_connection_and_get_definitions(conf, host=None, username=None, password=None, debug=False):
     '''
     Load user's credentials & the ogreserver hostname from the CLI/environment
     Create a Connection object and login
     Load the definitions from ogreserver
     '''
-    # setup user auth creds
-    conf['host'], conf['username'], conf['password'] = setup_user_auth(args, conf)
+    # setup connection details
+    conf['host'], conf['username'], conf['password'] = setup_user_auth(
+        conf,
+        host=host,
+        username=username,
+        password=password,
+    )
 
     # include http:// on host if missing
     if not conf['host'].startswith('http'):
@@ -132,11 +143,11 @@ def setup_ogreserver_connection_and_get_definitions(args, conf):
     conf['ignore_ssl_errors'] = True
 
     # if --host supplied CLI, ignore SSL errors on connect
-    if args.host:
+    if conf['host']:
         conf['ignore_ssl_errors'] = True
 
     # authenticate user and generate session API key
-    connection = OgreConnection(conf, debug=args.debug)
+    connection = OgreConnection(conf, debug=debug)
     connection.login(conf['username'], conf['password'])
 
     # query the server for current ebook definitions (which file extensions to scan for etc)
@@ -145,11 +156,11 @@ def setup_ogreserver_connection_and_get_definitions(args, conf):
     return connection
 
 
-def setup_providers(args, conf):
+def setup_providers(conf, ebook_home):
     '''
     Validate OGRE_HOME and ebooks providers (kindle etc) on the local machine
     '''
-    ebook_home_found, conf['ebook_home'] = setup_ebook_home(args, conf)
+    ebook_home_found, conf['ebook_home'] = setup_ebook_home(conf, ebook_home)
 
     # make accessible as class variable on EbookObject
     EbookObject.ebook_home = conf['ebook_home']
@@ -159,11 +170,11 @@ def setup_providers(args, conf):
 
     conf['ignore_providers'] = []
 
-    # ignore certain providers as determined by --ignore-* params
-    for provider in PROVIDERS.keys():
-        ignore_str = 'ignore_{}'.format(provider)
-        if ignore_str in vars(args) and vars(args)[ignore_str] is True:
-            conf['ignore_providers'].append(provider)
+    ## ignore certain providers as determined by --ignore-* params
+    #for provider in PROVIDERS.keys():
+    #    ignore_str = 'ignore_{}'.format(provider)
+    #    if ignore_str in vars(args) and vars(args)[ignore_str] is True:
+    #        conf['ignore_providers'].append(provider)
 
     # scan for ebook-provider directories; modifies config in-place
     find_ebook_providers(conf, ignore=conf['ignore_providers'])
@@ -186,7 +197,7 @@ def init_cache(conf):
                 'will be much slower than subsequent runs.')
 
 
-def dedrm_check(args, conf):
+def dedrm_check(conf):
     '''
     Check for and attempt to install dedrm tools
     '''
@@ -202,7 +213,7 @@ def dedrm_check(args, conf):
     prntr.info('Initialised DeDRM tools v{}'.format(DEDRM_PLUGIN_VERSION))
 
 
-def setup_user_auth(args, conf):
+def setup_user_auth(conf, host, username, password):
     """
     Setup user auth credentials, sourced in this order:
      - CLI params
@@ -210,11 +221,6 @@ def setup_user_auth(args, conf):
      - Saved values in ogre config
      - CLI readline interface
     """
-    # 1) load CLI parameters
-    host = args.host
-    username = args.username
-    password = args.password
-
     # 2) load ENV vars
     if host is None:
         host = os.environ.get('OGRE_HOST')
@@ -246,40 +252,32 @@ def setup_user_auth(args, conf):
 
         # final username verification
         if not username:
-            raise exceptions.ConfigSetupError('O.G.R.E. username not supplied')
+            raise exceptions.OgreException('O.G.R.E. username not supplied')
 
     # 4.3) load password via readline
     if not password:
         prntr.info('Please enter your password, or press enter to exit:')
         password = getpass.getpass()
         if len(password) == 0:
-            raise exceptions.ConfigSetupError('O.G.R.E. password not supplied')
+            raise exceptions.OgreException('O.G.R.E. password not supplied')
 
     return host, username, password
 
 
-def setup_ebook_home(args, conf):
+def setup_ebook_home(conf, ebook_home):
     """
     Setup user's ebook home, config being set with this order of precedence:
-     - CLI params
-     - ENV vars
+     - CLI param
+     - ENV var
      - saved values in ogre config
      - automatically created in $HOME
     """
-    ebook_home = None
-
-    # 1) load CLI parameters (if available)
-    try:
-        ebook_home = args.ebook_home
-    except AttributeError:
-        pass
-
     # 2) load ENV vars
-    if ebook_home is None:
+    if not ebook_home:
         ebook_home = os.environ.get('OGRE_HOME')
 
     # 3) load settings from saved config
-    if ebook_home is None or len(ebook_home) == 0:
+    if not ebook_home:
         ebook_home = conf.get('ebook_home', None)
 
     if type(ebook_home) is str:
