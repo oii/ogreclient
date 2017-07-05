@@ -1,8 +1,18 @@
+.PHONY: help clean dist build-dedrm clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
+
 AWS_ACCESS_KEY_ID?=error
 AWS_SECRET_ACCESS_KEY?=error
 AWS_DEFAULT_REGION?=local
 ENV?=dev
 AWSCLI?=/usr/local/bin/aws
+
+
+help:
+	@echo 'Usage:'
+	@echo '   make clean           remove all build artifacts'
+	@echo '   make dist            build python distributable with setuptools'
+	@echo '   make release         push ogreclient and dedrm tools to S3'
+	@echo '   make build-dedrm     pull latest DeDRM source and build python distributable'
 
 
 clean:
@@ -39,6 +49,3 @@ package-bitbar: fetch-bitbar
 
 push-bitbar-s3:
 	$(AWSCLI) s3 cp dist/BitBarDistro.zip s3://ogre-dist-$(ENV)-$(AWS_DEFAULT_REGION) --acl=public-read
-
-
-.PHONY: clean dist build-dedrm clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
