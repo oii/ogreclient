@@ -1,61 +1,28 @@
-O.G.R.E.
-========
+===== Distributing Ogreclient =====
 
-[![Build Status](http://img.shields.io/travis/oii/ogre.svg?style=flat-square&branch=develop)][travis]
-[![CircleCI](https://img.shields.io/circleci/project/github/oii/ogre.svg)][circleci]
-[![Code Health](https://landscape.io/github/oii/ogre/dev/landscape.svg?style=flat)](https://landscape.io/github/oii/ogre/dev)
-[![Made By Oii](http://img.shields.io/badge/made%20by-oii-blue.svg?style=flat-square)][author]
-[![BSD License](http://img.shields.io/badge/license-BSD-red.svg?style=flat-square)][license]
+==== Simple ====
 
-[travis]: http://travis-ci.org/oii/ogre
-[circleci]: https://circleci.com/gh/oii/ogre
-[author]: http://github.com/oii/ogre
-[license]: http://github.com/oii/ogre/blob/master/LICENSE
+Run the following command, which will build ogreclient and dedrm distributions:
+
+    make dist
+
+Alternatively the following command will build and push to S3 for use in staging/production. Note the supplied environment vars - you will also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` exported:
+
+    ENV=staging AWS_DEFAULT_REGION=eu-west-1 make release
 
 
-OGRE is an ebook storage and synchronisation service.
+==== Detailed ====
 
-OGRE comes in two parts:
-  - a server built in Python relying on Flask and Celery
-  - a cross-platform client script in Python which synchronises ebooks to the server.
+The normal Python setuptools method will create a source distribution that is cross-platform compatible.
+The actual command for this is in the `Makefile`, as part of the `dist` command.
 
-
-Ogreserver
-----------
-
-A `Vagrantfile` is included to start a development OGRE server.
-
-    cd ogreserver/config
-    vagrant up
-
-SSH into the VM and bootstrap the server with the salt CM configs:
-
-    vagrant ssh
-    sudo salt-call state.apply
-
-Once this is complete, you should have a working OGRE server. You can check things are running with:
-
-    sudo supervisorctl status
-    ogreserver:celerybeat            RUNNING   pid 17857, uptime 0:04:22
-    ogreserver:celeryd.high          RUNNING   pid 17859, uptime 0:04:22
-    ogreserver:celeryd.low           RUNNING   pid 17858, uptime 0:04:22
-    ogreserver:gunicorn              RUNNING   pid 17860, uptime 0:04:22
-    s3proxy                          RUNNING   pid 17856, uptime 0:04:22
-
-A preconfigured tmux dev environment is available also:
-
-    tmux attach
+=== OSX ===
 
 
-Ogreclient
-----------
 
-The client app to sync with the server can be run with the `ogre` command. Install it locally into
-a virtualenv:
 
-    cd ogreclient
-    pip install -e .
 
-And run a sync to your VM:
+==== Testing ====
 
-    ogre --ogreserver 172.16.8.128:8005
+The dist directory contains two Vagrant projects, one for OSX and one for Windows. These enable us
+to test the client install scripts on each client OS.

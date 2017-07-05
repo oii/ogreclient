@@ -7,9 +7,9 @@ ogreclient/dedrm/
 ogreserver/install
 ogreserver/robots.txt
 
-ogreclient/dist/ogreclient-*
-ogreclient/dist/BitBar*.zip
-ogreclient/dist/bitbar-bundler
+dist/ogreclient-*
+dist/BitBar*.zip
+dist/bitbar-bundler
 
 .DS_Store
 search.db

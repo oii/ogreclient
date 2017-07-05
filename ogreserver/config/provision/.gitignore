@@ -1,6 +1,0 @@
-aws-keys
-terraform.tfvars
-terraform.tfstate.backup
-.terraform/
-common/iso/*.iso
-*/output-vmware-iso/

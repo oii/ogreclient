@@ -5,7 +5,7 @@ import collections
 import os
 import shutil
 
-from ogreclient.ogreclient.providers import LibProvider
+from ogreclient.providers import LibProvider
 
 
 def test_get_definitions(mock_connection, get_definitions, client_config):

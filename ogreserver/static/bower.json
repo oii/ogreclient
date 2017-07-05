@@ -1,7 +1,0 @@
-{
-	"name": "ogreserver",
-	"dependencies": {
-		"foundation-sites": "~6.2.4",
-		"intercooler-js": "~1.0.2"
-	}
-}

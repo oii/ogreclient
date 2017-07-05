@@ -1,1 +1,0 @@
-/var/cache/ogre/bower/intercooler-js/src/intercooler.js
