@@ -1,10 +1,12 @@
-.PHONY: help clean dist clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
+.PHONY: help clean dist pyinstaller clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
 
 AWS_ACCESS_KEY_ID?=error
 AWS_SECRET_ACCESS_KEY?=error
 AWS_DEFAULT_REGION?=local
 ENV?=dev
 AWSCLI?=/usr/local/bin/aws
+
+VERSION:=$$(python setup.py --version)
 
 
 help:
@@ -15,10 +17,26 @@ help:
 
 
 clean:
-	@rm -rf dist/ogreclient-* ogreclient.egg-info build
+	@rm -rf ogreclient.egg-info
+	@find . -name "*.spec" -delete
 
 dist: clean
 	python setup.py sdist --formats=gztar,zip
+
+pyinstaller: dist
+	virtualenv --python python2.7 /tmp/build
+	source /tmp/build/bin/activate && \
+		pip install 'pyinstaller>3.2,<3.3' && \
+		pip install "dist/ogreclient-$(VERSION).tar.gz" && \
+		echo "Building ogreclient $(VERSION)" && \
+		pyinstaller \
+			--clean \
+			--noconfirm \
+			--onefile \
+			--hidden-import=queue \
+			--name ogre-$(VERSION) \
+			ogreclient/cli.py
+	@rm -rf /tmp/build
 
 release: dist
 	cd dist && \
