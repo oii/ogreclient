@@ -5,9 +5,12 @@ import collections
 import os
 import shutil
 
+import mock
+
 from ogreclient.providers import LibProvider
 
 
+@mock.patch('ogreclient.utils.OgreConnection')
 def test_get_definitions(mock_connection, get_definitions, client_config):
     # /definitions endpoint returns json of app's EBOOK_DEFINITIONS config
     mock_connection.request.return_value = [
@@ -28,7 +31,8 @@ def test_get_definitions(mock_connection, get_definitions, client_config):
     assert defs['pdf'].is_valid_format is False
 
 
-def test_search(search_for_ebooks, mock_subprocess_popen, client_config, ebook_lib_path, tmpdir):
+@mock.patch('ogreclient.ebook_obj.subprocess.Popen')
+def test_search(mock_subprocess_popen, search_for_ebooks, client_config, ebook_lib_path, tmpdir):
     # mock return from Popen().communicate()
     mock_subprocess_popen.return_value.communicate.return_value = (b"Title               : Alice's Adventures in Wonderland\nAuthor(s)           : Lewis Carroll [Carroll, Lewis]\nTags                : Fantasy\nLanguages           : eng\nPublished           : 2008-06-26T14:00:00+00:00\nRights              : Public domain in the USA.\nIdentifiers         : uri:http://www.gutenberg.org/ebooks/11\n", b'')
 
@@ -48,7 +52,8 @@ def test_search(search_for_ebooks, mock_subprocess_popen, client_config, ebook_l
     assert data[data.keys()[0]].file_hash == '42344f0e247923fcb347c0e5de5fc762'
 
 
-def test_search_ranking(search_for_ebooks, mock_subprocess_popen, client_config, ebook_lib_path, tmpdir):
+@mock.patch('ogreclient.ebook_obj.subprocess.Popen')
+def test_search_ranking(mock_subprocess_popen, search_for_ebooks, client_config, ebook_lib_path, tmpdir):
     # mock return from Popen().communicate()
     mock_subprocess_popen.return_value.communicate.return_value = (b"Title               : Alice's Adventures in Wonderland\nAuthor(s)           : Lewis Carroll [Carroll, Lewis]\nTags                : Fantasy\nLanguages           : eng\nPublished           : 2008-06-26T14:00:00+00:00\nRights              : Public domain in the USA.\nIdentifiers         : uri:http://www.gutenberg.org/ebooks/11\n", b'')
 

@@ -98,62 +98,6 @@ def helper_get_ebook(client_config, ebook_lib_path):
     return wrapped
 
 
-@pytest.yield_fixture(scope='function')
-def mock_connection():
-    m = mock.patch('ogreclient.utils.OgreConnection')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_subprocess_popen(calibre_ebook_meta_bin):
-    m = mock.patch('ogreclient.ebook_obj.subprocess.Popen')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_os_environ_get():
-    m = mock.patch('ogreclient.prereqs.os.environ.get')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_subprocess_check_output():
-    m = mock.patch('ogreclient.prereqs.subprocess.check_output')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_raw_input():
-    m = mock.patch('__builtin__.raw_input')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_getpass_getpass():
-    m = mock.patch('ogreclient.prereqs.getpass.getpass')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_os_mkdir():
-    m = mock.patch('ogreclient.prereqs.os.mkdir')
-    yield m.start()
-    m.stop()
-
-
-@pytest.yield_fixture(scope='function')
-def mock_os_path_exists():
-    m = mock.patch('ogreclient.prereqs.os.path.exists')
-    yield m.start()
-    m.stop()
-
-
 @pytest.fixture(scope='function')
 def get_definitions():
     def wrapped(connection):

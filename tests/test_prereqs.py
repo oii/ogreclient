@@ -3,8 +3,11 @@ from __future__ import unicode_literals
 
 import platform
 
+import mock
 
-def test_setup_user_auth_env(setup_user_auth, mock_os_environ_get, client_config):
+
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_user_auth_env(mock_os_environ_get, setup_user_auth, client_config):
     # setup mock for os.environ.get()
     def os_environ_get_side_effect(env_var, default=None):
         if env_var == 'OGRE_HOST':
@@ -25,7 +28,8 @@ def test_setup_user_auth_env(setup_user_auth, mock_os_environ_get, client_config
     assert password == 'env_pass'
 
 
-def test_setup_user_auth_config(setup_user_auth, mock_os_environ_get, client_config):
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_user_auth_config(mock_os_environ_get, setup_user_auth, client_config):
     # setup mock for os.environ.get()
     mock_os_environ_get.return_value = None
 
@@ -40,7 +44,10 @@ def test_setup_user_auth_config(setup_user_auth, mock_os_environ_get, client_con
     assert password == 'client_pass'
 
 
-def test_setup_user_auth_params(setup_user_auth, mock_os_environ_get, mock_raw_input, mock_getpass_getpass, client_config):
+@mock.patch('ogreclient.prereqs.getpass.getpass')
+@mock.patch('__builtin__.raw_input')
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_user_auth_params(mock_os_environ_get, mock_raw_input, mock_getpass_getpass, setup_user_auth, client_config):
     # setup mock for os.environ.get()
     mock_os_environ_get.return_value = None
 
@@ -51,7 +58,7 @@ def test_setup_user_auth_params(setup_user_auth, mock_os_environ_get, mock_raw_i
     # setup mock for raw_input()
     mock_raw_input.return_value = 'manual_user'
 
-    # setup mock for getpass module 
+    # setup mock for getpass module
     mock_getpass_getpass.return_value = 'manual_pass'
 
     # setup_user_auth() modifies client_config in place
@@ -62,7 +69,9 @@ def test_setup_user_auth_params(setup_user_auth, mock_os_environ_get, mock_raw_i
     assert password == 'manual_pass'
 
 
-def test_setup_ebook_home_env(setup_ebook_home, mock_os_environ_get, mock_os_mkdir, client_config):
+@mock.patch('ogreclient.prereqs.os.mkdir')
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_ebook_home_env(mock_os_environ_get, mock_os_mkdir, setup_ebook_home, client_config):
     # setup mock for os.environ.get()
     def os_environ_get_side_effect(env_var, default=None):
         if env_var in 'OGRE_HOME':
@@ -78,7 +87,9 @@ def test_setup_ebook_home_env(setup_ebook_home, mock_os_environ_get, mock_os_mkd
     assert not mock_os_mkdir.called
 
 
-def test_setup_ebook_home_params(setup_ebook_home, mock_os_environ_get, mock_os_mkdir, client_config):
+@mock.patch('ogreclient.prereqs.os.mkdir')
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_ebook_home_params(mock_os_environ_get, mock_os_mkdir, setup_ebook_home, client_config):
     # setup mock for os.environ.get()
     mock_os_environ_get.return_value = None
 
@@ -91,7 +102,10 @@ def test_setup_ebook_home_params(setup_ebook_home, mock_os_environ_get, mock_os_
     assert not mock_os_mkdir.called
 
 
-def test_setup_ebook_home_mkdir(setup_ebook_home, mock_os_environ_get, mock_os_mkdir, mock_os_path_exists, client_config):
+@mock.patch('ogreclient.prereqs.os.path.exists')
+@mock.patch('ogreclient.prereqs.os.mkdir')
+@mock.patch('ogreclient.prereqs.os.environ.get')
+def test_setup_ebook_home_mkdir(mock_os_environ_get, mock_os_mkdir, mock_os_path_exists, setup_ebook_home, client_config):
     # setup mock for os.environ.get()
     mock_os_environ_get.return_value = None
 
