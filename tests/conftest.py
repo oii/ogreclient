@@ -147,6 +147,13 @@ def mock_os_mkdir():
     m.stop()
 
 
+@pytest.yield_fixture(scope='function')
+def mock_os_path_exists():
+    m = mock.patch('ogreclient.prereqs.os.path.exists')
+    yield m.start()
+    m.stop()
+
+
 @pytest.fixture(scope='function')
 def get_definitions():
     def wrapped(connection):

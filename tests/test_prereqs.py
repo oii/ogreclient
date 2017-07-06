@@ -91,9 +91,12 @@ def test_setup_ebook_home_params(setup_ebook_home, mock_os_environ_get, mock_os_
     assert not mock_os_mkdir.called
 
 
-def test_setup_ebook_home_mkdir(setup_ebook_home, mock_os_environ_get, mock_os_mkdir, client_config):
+def test_setup_ebook_home_mkdir(setup_ebook_home, mock_os_environ_get, mock_os_mkdir, mock_os_path_exists, client_config):
     # setup mock for os.environ.get()
     mock_os_environ_get.return_value = None
+
+    # ensure that default ebook_home doesn't already exist..
+    mock_os_path_exists.return_value = False
 
     # no ebook_home supplied
     client_config['ebook_home'] = None
