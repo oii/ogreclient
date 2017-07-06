@@ -140,6 +140,10 @@ class FailedGettingDefinitionsError(OgreException):
     pass
 
 
+class EbookMissingError(OgreException):
+    pass
+
+
 class DeDrmMissingError(BaseEbookWarning):
     # DeDrmMissing exception must support a missing ebook_obj when raised in
     # the initialisation of dedrm.py

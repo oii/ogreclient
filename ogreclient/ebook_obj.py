@@ -9,7 +9,7 @@ import sys
 
 from urllib2 import HTTPError, URLError
 
-from .exceptions import RequestError, CorruptEbookError, FailedWritingMetaDataError, FailedConfirmError
+from .exceptions import RequestError, CorruptEbookError, EbookMissingError, FailedWritingMetaDataError, FailedConfirmError
 from .utils import compute_md5, id_generator, make_temp_directory
 
 
@@ -124,6 +124,9 @@ class EbookObject:
         # get the current filesystem encoding
         fs_encoding = sys.getfilesystemencoding()
 
+        if not os.path.exists(self.path):
+            raise EbookMissingError('File missing: {}'.format(self.path))
+
         # call ebook-metadata
         proc = subprocess.Popen(
             '{} "{}"'.format(
@@ -145,9 +148,6 @@ class EbookObject:
 
         # initialize all the metadata we attempt to extract
         meta = {}
-
-        # modify behaviour for epub/mobi
-        fmt = os.path.splitext(self.path)[1]
 
         for line in extracted.splitlines():
             # extract the simple metadata
@@ -260,6 +260,9 @@ class EbookObject:
     def add_ogre_id_tag(self, ebook_id, connection):
         self.ebook_id = ebook_id
 
+        if not os.path.exists(self.path):
+            raise EbookMissingError('File missing: {}'.format(self.path))
+
         # ebook file format
         fmt = os.path.splitext(self.path)[1]
 
@@ -345,6 +348,9 @@ class EbookObject:
 
         if existing_tags is not None and 'OGRE-DeDRM' in existing_tags:
             return
+
+        if not os.path.exists(self.path):
+            raise EbookMissingError('File missing: {}'.format(self.path))
 
         with make_temp_directory() as temp_dir:
             # ebook file format
