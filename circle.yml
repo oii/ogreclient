@@ -3,10 +3,16 @@ machine:
     version: 2.7.13
 
 dependencies:
+  pre:
+    - sudo apt-get install -y libltdl7 python3-pyqt5
+    - mkdir ~/calibre
+    - curl -o ~/calibre/calibre.txz https://s3-eu-west-1.amazonaws.com/calibre-binary-mirror/calibre-2.80.0-x86_64.txz
+    - cd ~/calibre && tar xf calibre.txz
+    - sudo ~/calibre/calibre_postinstall
   post:
     - pip install -r requirements-test.txt
     - pip install https://github.com/oii/DeDRM_tools/releases/download/v6.5.4/dedrm-6.5.4.tar.gz
 
 test:
   override:
-    - py.test -s -m 'not requires_calibre'
+    - py.test -s
