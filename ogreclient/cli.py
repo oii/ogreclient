@@ -7,9 +7,9 @@ import os
 import sys
 
 from . import __version__
-
 from .config import read_config
 from .core import scan_and_show_stats, sync
+from .dedrm import decrypt, DRM, DecryptionError
 from .ebook_obj import EbookObject
 from .prereqs import setup_ogreclient
 from .printer import CliPrinter
@@ -138,7 +138,7 @@ def parse_command_line(conf):
 
     psync.add_argument(
         '--no-drm', action='store_true',
-        help="Disable DRM removal during sync; don't install DeDRM tools")
+        help="Disable DRM removal during sync")
     psync.add_argument(
         '--dry-run', '-d', action='store_true',
         help="Dry run the sync; don't actually upload anything to the server")
@@ -246,7 +246,6 @@ def main(conf, args):
 
 def dedrm_single_ebook(conf, inputfile, output_dir):
     filename, ext = os.path.splitext(inputfile)
-    from .dedrm import decrypt, DRM, DecryptionError
 
     try:
         prntr.info('Decrypting ebook {}'.format(os.path.basename(inputfile)))

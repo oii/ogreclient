@@ -1,22 +1,14 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import importlib
 import os
-import subprocess
 
-from .exceptions import RequestError, DeDrmNotAvailable, DeDrmMissingError, \
-        DecryptionError, DecryptionFailed
+from dedrm import adobekey, kindlekey
+from dedrm import scriptinterface as moddedrm
+
+from .exceptions import DeDrmMissingError, DecryptionError, DecryptionFailed
 from .printer import CliPrinter
-from .utils import capture, enum, make_temp_directory, OgreConnection
-
-try:
-    # import DeDRM libs, capturing anything that's shat out on STDOUT
-    with capture() as out:
-        moddedrm = importlib.import_module('dedrm.scriptinterface')
-    CAN_DECRYPT = True
-except ImportError as e:
-    CAN_DECRYPT = False
+from .utils import capture, enum, make_temp_directory
 
 
 DRM = enum('unknown', 'decrypted', 'none', 'wrong_key', 'failed', 'corrupt')
@@ -26,18 +18,6 @@ prntr = CliPrinter.get_printer()
 
 
 def decrypt(filepath, suffix, config_dir, output_dir=None):
-    # use the globally imported dedrm module ..
-    global moddedrm
-
-    # .. unless CAN_DECRYPT is false
-    if CAN_DECRYPT is False:
-        try:
-            # attempt dynamic import of dedrm in case it has been installed since original import
-            with capture() as out:
-                moddedrm = importlib.import_module('dedrm.scriptinterface')
-        except ImportError:
-            raise DeDrmMissingError
-
     if os.path.exists(filepath) is False or os.path.isfile(filepath) is False:
         raise DeDrmMissingError
 
@@ -116,16 +96,12 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
     return state, output_filepath
 
 
-def init_keys(config_dir, ignore_check=False):
-    if ignore_check is False and CAN_DECRYPT is False:
-        raise DeDrmMissingError
-
+def init_keys(config_dir):
     msgs = []
 
     # extract the Kindle key
     kindlekeyfile = os.path.join(config_dir, 'kindlekey.k4i')
     if not os.path.exists(kindlekeyfile):
-        from dedrm import kindlekey
         with capture() as out:
             kindlekey.getkey(kindlekeyfile)
 
@@ -143,7 +119,6 @@ def init_keys(config_dir, ignore_check=False):
     adeptkeyfile = os.path.join(config_dir, 'adeptkey.der')
     if not os.path.exists(adeptkeyfile):
         try:
-            from dedrm import adobekey
             with capture() as out:
                 adobekey.getkey(adeptkeyfile)
 
@@ -155,59 +130,3 @@ def init_keys(config_dir, ignore_check=False):
             pass
 
     return msgs
-
-
-def download_dedrm(config, debug=False):
-    prntr.info('Downloading latest DRM tools from {}'.format(config['host'].netloc))
-
-    # authenticate with ogreserver to get DRM tools
-    connection = OgreConnection(config)
-    connection.login(config['username'], config['password'])
-
-    prntr.info('Authenticated with Ogreserver')
-    prntr.info('Downloading..')
-
-    try:
-        # start download
-        resp, length = connection.download('download-dedrm')
-    except RequestError as e:
-        raise DeDrmNotAvailable('Failed getting DeDRM package', inner_excp=e)
-
-    # start progress bar
-    if length is None:
-        prntr.progressi()
-    else:
-        prntr.progressf(num_blocks=0, total_size=length)
-        i = 0
-
-    # stream to file and report progress
-    with open('/tmp/dedrm.tar.gz', 'wb') as f:
-        for data in resp.iter_content(chunk_size=4096):
-            f.write(data)
-
-            # display progress
-            if length is None:
-                prntr.progressi()
-            else:
-                i += 1
-                prntr.progressf(num_blocks=i, block_size=4096, total_size=length)
-
-    # end progress bar
-    prntr.close()
-
-    try:
-        # install DRM tools
-        subprocess.check_output('pip install /tmp/dedrm.tar.gz', shell=True)
-
-        # attempt a dynamic load of the newly imported tools
-        mod = importlib.import_module('dedrm')
-
-    except subprocess.CalledProcessError as e:
-        prntr.error('Failed installing dedrm tools', excp=e if debug else None)
-        return False
-    except ImportError as e:
-        prntr.error('Failed installing dedrm tools', excp=e)
-        return False
-
-    prntr.info('Installed dedrm {}'.format(mod.PLUGIN_VERSION))
-    return True

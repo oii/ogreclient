@@ -9,13 +9,15 @@ import subprocess
 import sys
 from urlparse import urlparse
 
+from dedrm import PLUGIN_VERSION as DEDRM_PLUGIN_VERSION
+
 from .cache import Cache
 from .config import write_config
 from .core import get_definitions
-from .dedrm import download_dedrm
+from .dedrm import init_keys
 from .definitions import OGRE_PROD_HOST
-from .exceptions import (ConfigSetupError, NoEbookSourcesFoundError, DeDrmNotAvailable,
-                         EbookHomeMissingError, CalibreNotAvailable)
+from .exceptions import (ConfigSetupError, NoEbookSourcesFoundError,
+              EbookHomeMissingError, CalibreNotAvailable)
 from .printer import CliPrinter
 from .providers import PROVIDERS, find_ebook_providers
 from .utils import OgreConnection
@@ -41,16 +43,8 @@ def setup_ogreclient(args, conf):
     # setup the sqlite cache
     init_cache(conf)
 
-    # ensure the DRM tools are installed and up-to-date
-    if args.mode == 'sync':
-        if args.no_drm is True:
-            # skip drm check
-            pass
-        else:
-            dedrm_check(args, conf)
-
-    elif args.mode == 'init':
-        dedrm_check(args, conf)
+    # check dedrm is working
+    dedrm_check(args, conf)
 
     if args.mode == 'stats' and 'username' not in conf:
         # supply a default username during stats queries
@@ -180,44 +174,16 @@ def dedrm_check(args, conf):
     '''
     Check for and attempt to install dedrm tools
     '''
-    # check if we have decrypt capability
-    from .dedrm import CAN_DECRYPT
-
     if platform.system() == 'Linux':
         prntr.info('DeDRM in not supported under Linux')
         return
 
-    if CAN_DECRYPT is False:
-        if not hasattr(args, 'host'):
-            raise DeDrmNotAvailable((
-                'DeDRM tools are not yet installed. '
-                'Please re-run with --host, --username & --password parameters to install them.'
-            ))
-
-        # attempt to download and setup dedrm
-        attempted_download = True
-        installed = download_dedrm(conf, debug=args.debug)
-
-        if installed is None:
-            # auth failed contacting ogreserver
-            return
-    else:
-        attempted_download = False
-        installed = False
-
-    from .dedrm import init_keys
-
     # initialise a working dedrm lib
-    if CAN_DECRYPT is True or installed is True:
-        msgs = init_keys(conf['config_dir'], ignore_check=True)
-        for m in msgs:
-            prntr.info(m)
+    msgs = init_keys(conf['config_dir'])
+    for m in msgs:
+        prntr.info(m)
 
-        from dedrm import PLUGIN_VERSION
-        prntr.info('Initialised DeDRM tools v{}'.format(PLUGIN_VERSION))
-
-    elif attempted_download is True:
-        prntr.error('Failed to download DRM tools. Please report this error.')
+    prntr.info('Initialised DeDRM tools v{}'.format(DEDRM_PLUGIN_VERSION))
 
 
 def setup_user_auth(args, conf):
