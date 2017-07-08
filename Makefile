@@ -27,6 +27,7 @@ pyinstaller: dist
 	virtualenv --python python2.7 /tmp/build
 	source /tmp/build/bin/activate && \
 		pip install 'pyinstaller>3.2,<3.3' && \
+		pip install 'https://github.com/oii/DeDRM_tools/releases/download/v6.5.4/dedrm-6.5.4.tar.gz' && \
 		pip install "dist/ogreclient-$(VERSION).tar.gz" && \
 		echo "Building ogreclient $(VERSION)" && \
 		pyinstaller \
