@@ -1,4 +1,4 @@
-.PHONY: help clean dist build-dedrm clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
+.PHONY: help clean dist clean-bitbar fetch-bitbar package-bitbar push-bitbar-s3
 
 AWS_ACCESS_KEY_ID?=error
 AWS_SECRET_ACCESS_KEY?=error
@@ -12,24 +12,18 @@ help:
 	@echo '   make clean           remove all build artifacts'
 	@echo '   make dist            build python distributable with setuptools'
 	@echo '   make release         push ogreclient and dedrm tools to S3'
-	@echo '   make build-dedrm     pull latest DeDRM source and build python distributable'
 
 
 clean:
-	@rm -rf dist/ogreclient-* ogreclient.egg-info build dedrm
+	@rm -rf dist/ogreclient-* ogreclient.egg-info build
 
-dist: clean build-dedrm
+dist: clean
 	python setup.py sdist --formats=gztar,zip
 
 release: dist
 	cd dist && \
 		$(AWSCLI) s3 cp . s3://ogre-dist-$(ENV)-$(AWS_DEFAULT_REGION) --recursive --exclude "*" --include "ogreclient-*" --acl=public-read
-	$(AWSCLI) s3 cp dedrm/dist/dedrm-*.tar.gz s3://ogre-dist-$(ENV)-$(AWS_DEFAULT_REGION) --acl=public-read
-
-build-dedrm:
-	git clone --branch ogre https://github.com/oii/DeDRM_tools.git dedrm
-	cd dedrm && \
-		python setup.py sdist
+	$(AWSCLI) s3 cp s3://ogre-dist-$(ENV)-$(AWS_DEFAULT_REGION) --acl=public-read
 
 clean-bitbar:
 	@rm -rf dist/BitBar*.{zip,app} dist/bitbar-bundler
