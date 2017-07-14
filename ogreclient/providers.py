@@ -137,40 +137,42 @@ def _handle_home_Darwin(provider):
 
 
 def _handle_kindle_Darwin(provider):
-    # search for Kindle on OSX
-    plist1 = os.path.expanduser('~/Library/Containers/com.amazon.Kindle/Data/Library/Preferences/com.amazon.Kindle.plist')
-    plist2 = os.path.expanduser('~/Library/Preferences/com.amazon.Kindle.plist')
+    # search for Kindle prefs on OSX
+    plists = [
+        os.path.expanduser('~/Library/Containers/com.amazon.Kindle/Data/Library/Preferences/com.amazon.Kindle.plist'),
+        os.path.expanduser('~/Library/Preferences/com.amazon.Kindle.plist'),
+    ]
+
+    inner_excp = None
 
     # check OSX plist file exists
-    plist = None
-    for l in (plist1, plist2):
-        if os.path.exists(l):
-            plist = l
-            break
+    for plist in plists:
+        if not os.path.exists(plist):
+            continue
 
-    if plist is None:
-        raise KindleUnavailableWarning
+        with make_temp_directory() as tmpdir:
+            try:
+                # parse plist file and extract Kindle's file storage directory
+                plist_tmp_path = os.path.join(tmpdir, 'com.amazon.Kindle.plist')
 
-    with make_temp_directory() as tmpdir:
-        try:
-            # parse plist file and extract Kindle's file storage directory
-            plist_tmp_path = os.path.join(tmpdir, 'com.amazon.Kindle.plist')
+                # copy plist to temp dir
+                shutil.copyfile(plist, plist_tmp_path)
 
-            # copy plist to temp dir
-            shutil.copyfile(plist, plist_tmp_path)
+                # convert binary plist file to XML
+                subprocess.check_call('plutil -convert xml1 {}'.format(plist_tmp_path), shell=True)
 
-            # convert binary plist file to XML
-            subprocess.check_call('plutil -convert xml1 {}'.format(plist_tmp_path), shell=True)
+                # extract plist
+                data = plistlib.readPlist(plist_tmp_path)
 
-            # extract plist
-            data = plistlib.readPlist(plist_tmp_path)
+                # validate kindle dir
+                if os.path.exists(data['User Settings.CONTENT_PATH']):
+                    provider.libpath = data['User Settings.CONTENT_PATH']
 
-            # validate kindle dir
-            if os.path.exists(data['User Settings.CONTENT_PATH']):
-                provider.libpath = data['User Settings.CONTENT_PATH']
+            except Exception as e:
+                inner_excp = KindleProviderError(inner_excp=e)
 
-        except Exception as e:
-            raise KindleProviderError(inner_excp=e)
+    if provider.libpath is None:
+        raise KindleUnavailableWarning(inner_excp=inner_excp)
 
 
 def _handle_ade_Darwin(provider):
