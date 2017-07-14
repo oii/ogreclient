@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import os
 import platform
+import plistlib
 import shutil
 import subprocess
 import urllib
@@ -150,31 +151,23 @@ def _handle_kindle_Darwin(provider):
     if plist is None:
         raise KindleUnavailableWarning
 
-    # parse plist file and extract Kindle ebooks dir
     with make_temp_directory() as tmpdir:
         try:
+            # parse plist file and extract Kindle's file storage directory
             plist_tmp_path = os.path.join(tmpdir, 'com.amazon.Kindle.plist')
 
             # copy plist to temp dir
             shutil.copyfile(plist, plist_tmp_path)
 
-            # convert binary plist file to plain text
+            # convert binary plist file to XML
             subprocess.check_call('plutil -convert xml1 {}'.format(plist_tmp_path), shell=True)
 
-            # parse XML plist file
-            with open(plist_tmp_path, 'r') as f:
-                data = f.read()
-
-            # minidom is rubbish; but there's no nextSibling in ElementTree
-            dom = minidom.parseString(data)
-            for node in dom.getElementsByTagName('key'):
-                if node.firstChild.nodeValue == 'User Settings.CONTENT_PATH':
-                    kindle_dir = node.nextSibling.nextSibling.firstChild.nodeValue
-                    break
+            # extract plist
+            data = plistlib.readPlist(plist_tmp_path)
 
             # validate kindle dir
-            if os.path.exists(kindle_dir) and os.path.isdir(kindle_dir):
-                provider.libpath = kindle_dir
+            if os.path.exists(data['User Settings.CONTENT_PATH']):
+                provider.libpath = data['User Settings.CONTENT_PATH']
 
         except Exception as e:
             raise KindleProviderError(inner_excp=e)
