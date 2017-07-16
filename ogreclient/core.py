@@ -172,6 +172,9 @@ def scan_for_ebooks(config):
     errord_list = []
 
     for item in ebooks:
+        if config['verbose']:
+            prntr.info('Meta data scanning {}'.format(item[0]))
+
         try:
             # optionally skip the cache
             if config['skip_cache'] is True:
@@ -256,7 +259,8 @@ def scan_for_ebooks(config):
             errord_list.append(e)
 
         i += 1
-        prntr.progressf(num_blocks=i, total_size=len(ebooks))
+        if config['verbose'] is False:
+            prntr.progressf(num_blocks=i, total_size=len(ebooks))
 
     if len(ebooks_by_authortitle) == 0:
         return {}, {}, errord_list, skipped
@@ -305,7 +309,7 @@ def clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash):
             i += 1
             prntr.progressf(num_blocks=i, total_size=len(ebooks_by_authortitle))
 
-    if config['verbose'] and cleaned > 0:
+    if cleaned > 0:
         prntr.info('Cleaned DRM from {} ebooks'.format(cleaned), success=True)
 
     return errord_list
