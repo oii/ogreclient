@@ -140,8 +140,8 @@ class EbookObject:
         # get raw bytes from stdout and stderr
         out_bytes, err_bytes = proc.communicate()
 
-        if err_bytes.find('EPubException') > 0:
-            raise CorruptEbookError(self, err_bytes.decode('utf8'))
+        if err_bytes.find(bytes('Traceback')) > 0:
+            raise CorruptEbookError(self, err_bytes)
 
         # interpret bytes as UTF-8
         extracted = out_bytes.decode('utf8')
