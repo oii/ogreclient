@@ -146,6 +146,9 @@ def _handle_kindle_Darwin(provider):
     except (IOError, KeyError) as e:
         raise KindleUnavailableWarning('Kindle for Mac not installed')
 
+    if provider.version > '1.17.1':
+        raise KindleUnavailableWarning('You need to install version 1.17.1 or lower to use OGRE')
+
     # search for Kindle prefs on OSX
     plists = [
         os.path.expanduser('~/Library/Containers/com.amazon.Kindle/Data/Library/Preferences/com.amazon.Kindle.plist'),
