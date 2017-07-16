@@ -11,13 +11,12 @@ from urlparse import urlparse
 
 from dedrm import PLUGIN_VERSION as DEDRM_PLUGIN_VERSION
 
+from . import exceptions
 from .cache import Cache
 from .config import write_config
 from .core import get_definitions
 from .dedrm import init_keys
 from .definitions import OGRE_PROD_HOST
-from .exceptions import (ConfigSetupError, NoEbookSourcesFoundError,
-              EbookHomeMissingError, CalibreNotAvailable)
 from .printer import CliPrinter
 from .providers import PROVIDERS, find_ebook_providers
 from .utils import OgreConnection
@@ -77,7 +76,7 @@ def check_calibre_exists(conf):
             calibre_ebook_meta_bin = os.path.join(ogre_win_path, 'CalibrePortable\Calibre\ebook-meta.exe')
 
             if not os.path.exists(calibre_ebook_meta_bin):
-                raise CalibreNotAvailable('Calibre could not be found in OGRE program directory!')
+                raise exceptions.CalibreNotAvailable('Calibre could not be found in OGRE program directory!')
 
         elif platform.system() == 'Linux':
             try:
@@ -88,7 +87,7 @@ def check_calibre_exists(conf):
 
         # ogreclient requires calibre (unfortunately)
         if not calibre_ebook_meta_bin:
-            raise CalibreNotAvailable('You must install Calibre in order to use ogreclient.')
+            raise exceptions.CalibreNotAvailable('You must install Calibre in order to use ogreclient.')
 
         # init the config dict
         conf['calibre_ebook_meta_bin'] = calibre_ebook_meta_bin
@@ -139,7 +138,7 @@ def setup_providers(args, conf):
     ebook_home_found, conf['ebook_home'] = setup_ebook_home(args, conf)
 
     if not os.path.exists(conf['ebook_home']):
-        raise EbookHomeMissingError("Path specified in OGRE_HOME doesn't exist!")
+        raise exceptions.EbookHomeMissingError("Path specified in OGRE_HOME doesn't exist!")
 
     conf['ignore_providers'] = []
 
@@ -154,7 +153,7 @@ def setup_providers(args, conf):
 
     # hard error if no ebook provider dirs found
     if ebook_home_found is False and not conf['providers']:
-        raise NoEbookSourcesFoundError
+        raise exceptions.NoEbookSourcesFoundError
 
 
 def init_cache(conf):
@@ -230,14 +229,14 @@ def setup_user_auth(args, conf):
 
         # final username verification
         if not username:
-            raise ConfigSetupError('O.G.R.E. username not supplied')
+            raise exceptions.ConfigSetupError('O.G.R.E. username not supplied')
 
     # 4.3) load password via readline
     if not password:
         prntr.info('Please enter your password, or press enter to exit:')
         password = getpass.getpass()
         if len(password) == 0:
-            raise ConfigSetupError('O.G.R.E. password not supplied')
+            raise exceptions.ConfigSetupError('O.G.R.E. password not supplied')
 
     return host, username, password
 

@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 
-from . import __version__
+from . import __version__, exceptions
 from .config import read_config
 from .core import scan_and_show_stats, sync
 from .dedrm import decrypt, DRM, DecryptionError
@@ -14,9 +14,6 @@ from .ebook_obj import EbookObject
 from .prereqs import setup_ogreclient
 from .printer import CliPrinter
 from .providers import PROVIDERS
-
-from .exceptions import OgreException, OgreWarning, ConfigSetupError, \
-        AuthDeniedError, AuthError, NoEbooksError, SyncError, UploadError
 
 
 prntr = CliPrinter.get_printer()
@@ -53,12 +50,12 @@ def entrypoint():
         if conf is not None:
             ret = main(conf, args)
 
-    except ConfigSetupError as e:
+    except exceptions.ConfigSetupError as e:
         prntr.error('Failed setting up ogre', excp=e)
-    except OgreWarning as e:
+    except exceptions.OgreWarning as e:
         prntr.error(e)
         ret = 1
-    except OgreException as e:
+    except exceptions.OgreException as e:
         prntr.error('An exception occurred in ogre', excp=e)
         ret = 1
     except KeyboardInterrupt:
@@ -278,7 +275,7 @@ def run_scan(conf):
         ret = scan_and_show_stats(conf)
 
     # print messages on error
-    except NoEbooksError:
+    except exceptions.NoEbooksError:
         prntr.error('No ebooks found. Pass --ebook-home or set $OGRE_HOME.')
     except Exception as e:
         prntr.error('Something went very wrong.', excp=e)
@@ -293,11 +290,11 @@ def run_sync(conf):
         uploaded_count = sync(conf)
 
     # print messages on error
-    except (AuthError, SyncError, UploadError) as e:
+    except (exceptions.AuthError, exceptions.SyncError, exceptions.UploadError) as e:
         prntr.error('Something went wrong.', excp=e)
-    except AuthDeniedError:
+    except exceptions.AuthDeniedError:
         prntr.error('Permission denied. This is a private system.')
-    except NoEbooksError:
+    except exceptions.NoEbooksError:
         prntr.error('No ebooks found. Pass --ebook-home or set $OGRE_HOME.')
     except Exception as e:
         prntr.error('Something went very wrong.', excp=e)

@@ -9,7 +9,7 @@ import sys
 
 from urllib2 import HTTPError, URLError
 
-from .exceptions import RequestError, CorruptEbookError, EbookMissingError, FailedWritingMetaDataError, FailedConfirmError
+from . import exceptions
 from .utils import compute_md5, id_generator, make_temp_directory
 
 
@@ -125,7 +125,7 @@ class EbookObject:
         fs_encoding = sys.getfilesystemencoding()
 
         if not os.path.exists(self.path):
-            raise EbookMissingError('File missing: {}'.format(self.path))
+            raise exceptions.EbookMissingError('File missing: {}'.format(self.path))
 
         # call ebook-metadata
         proc = subprocess.Popen(
@@ -141,7 +141,7 @@ class EbookObject:
         out_bytes, err_bytes = proc.communicate()
 
         if err_bytes.find(bytes('Traceback')) > 0:
-            raise CorruptEbookError(self, err_bytes)
+            raise exceptions.CorruptEbookError(self, err_bytes)
 
         # interpret bytes as UTF-8
         extracted = out_bytes.decode('utf8')
@@ -223,7 +223,7 @@ class EbookObject:
                 continue
 
         if not meta:
-            raise CorruptEbookError(self, 'Failed extracting from {}'.format(self.path))
+            raise exceptions.CorruptEbookError(self, 'Failed extracting from {}'.format(self.path))
 
         return meta
 
@@ -261,7 +261,7 @@ class EbookObject:
         self.ebook_id = ebook_id
 
         if not os.path.exists(self.path):
-            raise EbookMissingError('File missing: {}'.format(self.path))
+            raise exceptions.EbookMissingError('File missing: {}'.format(self.path))
 
         # ebook file format
         fmt = os.path.splitext(self.path)[1]
@@ -290,8 +290,8 @@ class EbookObject:
                             'new_hash': new_hash
                         }
                     )
-                except RequestError as e:
-                    raise FailedConfirmError(self, inner_excp=e)
+                except exceptions.RequestError as e:
+                    raise exceptions.FailedConfirmError(self, inner_excp=e)
 
                 if data['result'] == 'ok':
                     # move file back into place
@@ -300,17 +300,17 @@ class EbookObject:
                     return new_hash
 
                 elif data['result'] == 'fail':
-                    raise FailedConfirmError(self, "Server said 'no'")
+                    raise exceptions.FailedConfirmError(self, "Server said 'no'")
                 elif data['result'] == 'same':
-                    raise FailedConfirmError(self, "Server said 'same'")
+                    raise exceptions.FailedConfirmError(self, "Server said 'same'")
                 else:
-                    raise FailedConfirmError(self, 'Unknown response from server!')
+                    raise exceptions.FailedConfirmError(self, 'Unknown response from server!')
 
             except subprocess.CalledProcessError as e:
-                raise FailedWritingMetaDataError(self, str(e))
+                raise exceptions.FailedWritingMetaDataError(self, str(e))
 
             except (HTTPError, URLError) as e:
-                raise FailedConfirmError(self, str(e))
+                raise exceptions.FailedConfirmError(self, str(e))
 
 
     def _write_metadata_tags(self, temp_file_path):
@@ -350,7 +350,7 @@ class EbookObject:
             return
 
         if not os.path.exists(self.path):
-            raise EbookMissingError('File missing: {}'.format(self.path))
+            raise exceptions.EbookMissingError('File missing: {}'.format(self.path))
 
         with make_temp_directory() as temp_dir:
             # ebook file format
@@ -379,4 +379,4 @@ class EbookObject:
                 self.drmfree = True
 
             except subprocess.CalledProcessError as e:
-                raise FailedWritingMetaDataError(self, str(e))
+                raise exceptions.FailedWritingMetaDataError(self, str(e))

@@ -6,7 +6,7 @@ import os
 from dedrm import adobekey, kindlekey
 from dedrm import scriptinterface as moddedrm
 
-from .exceptions import DeDrmMissingError, DecryptionError, DecryptionFailed
+from . import exceptions
 from .printer import CliPrinter
 from .utils import capture, enum, make_temp_directory
 
@@ -19,7 +19,7 @@ prntr = CliPrinter.get_printer()
 
 def decrypt(filepath, suffix, config_dir, output_dir=None):
     if os.path.exists(filepath) is False or os.path.isfile(filepath) is False:
-        raise DeDrmMissingError
+        raise exceptions.DeDrmMissingError
 
     out = ""
 
@@ -78,7 +78,7 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
             state = DRM.none
             for line in lines:
                 if 'Error serializing pdf' in line:
-                    raise DecryptionFailed(out)
+                    raise exceptions.DecryptionFailed(out)
 
         if state in (DRM.none, DRM.decrypted):
             try:
@@ -97,7 +97,7 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
                 os.rename(os.path.join(ebook_convert_path, decrypted_filename), output_filepath)
 
             except Exception as e:
-                raise DecryptionError(
+                raise exceptions.DecryptionError(
                     'Decrypt successful, but failed to locate decrypted file: {}\n{}'.format(e, out)
                 )
         else:

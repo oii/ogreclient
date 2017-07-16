@@ -15,9 +15,8 @@ import tempfile
 import requests
 from requests.exceptions import ConnectionError, Timeout
 
+from . import exceptions
 from .printer import CliPrinter
-from .exceptions import (OgreException, RequestError, AuthError, AuthDeniedError,
-                        OgreserverDownError)
 
 
 prntr = CliPrinter.get_printer()
@@ -52,20 +51,20 @@ class OgreConnection(object):
             )
             # 502 in prod means Flask app is down
             if resp.status_code == 502:
-                raise OgreserverDownError
+                raise exceptions.OgreserverDownError
 
             data = resp.json()
         except ConnectionError as e:
-            raise OgreserverDownError(inner_excp=e)
+            raise exceptions.OgreserverDownError(inner_excp=e)
 
         # bad login
         if resp.status_code == 403 or data['meta']['code'] >= 400 and data['meta']['code'] < 500:
-            raise AuthDeniedError
+            raise exceptions.AuthDeniedError
 
         try:
             self.session_key = data['response']['user']['authentication_token']
         except KeyError as e:
-            raise AuthError(inner_excp=e)
+            raise exceptions.AuthError(inner_excp=e)
 
         return True
 
@@ -87,11 +86,11 @@ class OgreConnection(object):
             )
 
         except (Timeout, ConnectionError) as e:
-            raise OgreserverDownError(inner_excp=e)
+            raise exceptions.OgreserverDownError(inner_excp=e)
 
         # error handle this bitch
         if resp.status_code != 200:
-            raise RequestError(resp.status_code)
+            raise exceptions.RequestError(resp.status_code)
 
         return resp, resp.headers.get('Content-length')
 
@@ -111,11 +110,11 @@ class OgreConnection(object):
             )
 
         except (Timeout, ConnectionError) as e:
-            raise OgreserverDownError(inner_excp=e)
+            raise exceptions.OgreserverDownError(inner_excp=e)
 
         # error handle this bitch
         if resp.status_code != 200:
-            raise RequestError(resp.status_code)
+            raise exceptions.RequestError(resp.status_code)
 
         # JSON response as usual
         return resp.json()
@@ -137,11 +136,11 @@ class OgreConnection(object):
                 )
 
         except (Timeout, ConnectionError) as e:
-            raise OgreserverDownError(inner_excp=e)
+            raise exceptions.OgreserverDownError(inner_excp=e)
 
         # error handle this bitch
         if resp.status_code != 200:
-            raise RequestError(resp.status_code)
+            raise exceptions.RequestError(resp.status_code)
 
         # replies are always JSON
         return resp.json()
@@ -244,7 +243,7 @@ def retry(times):
                 try:
                     f(*args, **kwargs)
                     break
-                except OgreException as e:
+                except exceptions.OgreException as e:
                     last_error = e
                 retry += 1
 

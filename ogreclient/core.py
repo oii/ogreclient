@@ -5,17 +5,12 @@ from __future__ import division
 import os
 import shutil
 
+from . import exceptions
 from .ebook_obj import EbookObject
 from .utils import OgreConnection, deserialize_defs, make_temp_directory, retry
 from .printer import CliPrinter
 from .providers import LibProvider, PathsProvider
 from .dedrm import decrypt, DRM
-
-from .exceptions import RequestError, NoEbooksError, DuplicateEbookBaseError, \
-        ExactDuplicateEbookError, AuthortitleDuplicateEbookError, EbookIdDuplicateEbookError, \
-        SyncError, UploadError, CorruptEbookError, FailedWritingMetaDataError, \
-        FailedConfirmError, FailedDebugLogsError, MissingFromCacheError, OgreException, \
-        FailedUploadsQueryError, FailedGettingDefinitionsError, DeDrmMissingError, DecryptionFailed
 
 
 prntr = CliPrinter.get_printer()
@@ -29,8 +24,8 @@ def get_definitions(connection):
         # convert list of lists result into OrderedDict
         return deserialize_defs(data)
 
-    except RequestError as e:
-        raise FailedGettingDefinitionsError(inner_excp=e)
+    except exceptions.RequestError as e:
+        raise exceptions.FailedGettingDefinitionsError(inner_excp=e)
 
 
 def sync(config):
@@ -82,7 +77,7 @@ def sync(config):
     uploaded_count = upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload)
 
     # 7) display/send errors
-    all_errord = [err for err in scan_errord+decrypt_errord if isinstance(err, OgreException)]
+    all_errord = [err for err in scan_errord+decrypt_errord if isinstance(err, exceptions.OgreException)]
 
     if all_errord:
         if not config['debug']:
@@ -109,12 +104,12 @@ def scan_and_show_stats(config):
 
     # iterate list of exceptions
     for e in errord_list:
-        if isinstance(e, CorruptEbookError):
+        if isinstance(e, exceptions.CorruptEbookError):
             if 'corrupt' not in errors.keys():
                 errors['corrupt'] = 1
             else:
                 errors['corrupt'] += 1
-        elif isinstance(e, DuplicateEbookBaseError):
+        elif isinstance(e, exceptions.DuplicateEbookBaseError):
             if 'duplicate' not in errors.keys():
                 errors['duplicate'] = 1
             else:
@@ -164,7 +159,7 @@ def scan_for_ebooks(config):
     skipped = 0
     prntr.info('Discovered {} files'.format(len(ebooks)), bold=True)
     if len(ebooks) == 0:
-        raise NoEbooksError
+        raise exceptions.NoEbooksError
 
     prntr.info('Scanning ebook meta data..')
     ebooks_by_authortitle = {}
@@ -178,12 +173,12 @@ def scan_for_ebooks(config):
         try:
             # optionally skip the cache
             if config['skip_cache'] is True:
-                raise MissingFromCacheError
+                raise exceptions.MissingFromCacheError
 
             # get ebook from the cache
             ebook_obj = config['ebook_cache'].get_ebook(path=item[0])
 
-        except MissingFromCacheError:
+        except exceptions.MissingFromCacheError:
             # init the EbookObject
             ebook_obj = EbookObject(
                 config=config,
@@ -199,7 +194,7 @@ def scan_for_ebooks(config):
                 # with 'authortitle' as the key in a naive attempt at de-duplication
                 ebook_obj.get_metadata()
 
-            except CorruptEbookError as e:
+            except exceptions.CorruptEbookError as e:
                 # record books which failed during scan
                 errord_list.append(e)
 
@@ -218,12 +213,16 @@ def scan_for_ebooks(config):
         if ebook_obj.file_hash in ebooks_by_filehash.keys():
             # warn user on error stack
             errord_list.append(
-                ExactDuplicateEbookError(ebook_obj, ebooks_by_authortitle[ebook_obj.authortitle].path)
+                exceptions.ExactDuplicateEbookError(
+                    ebook_obj, ebooks_by_authortitle[ebook_obj.authortitle].path
+                )
             )
         elif ebook_obj.authortitle in ebooks_by_authortitle.keys() and ebooks_by_authortitle[ebook_obj.authortitle].format == ebook_obj.format:
             # warn user on error stack
             errord_list.append(
-                AuthortitleDuplicateEbookError(ebook_obj, ebooks_by_authortitle[ebook_obj.authortitle].path)
+                exceptions.AuthortitleDuplicateEbookError(
+                    ebook_obj, ebooks_by_authortitle[ebook_obj.authortitle].path
+                )
             )
         else:
             # new ebook, or different format of duplicate ebook found
@@ -254,7 +253,7 @@ def scan_for_ebooks(config):
             # add book to the cache
             config['ebook_cache'].store_ebook(ebook_obj)
 
-        except EbookIdDuplicateEbookError as e:
+        except exceptions.EbookIdDuplicateEbookError as e:
             # handle duplicate books with same ebook_id in metadata
             errord_list.append(e)
 
@@ -298,10 +297,10 @@ def clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash):
                 cleaned += 1
 
         # record books which failed decryption
-        except DeDrmMissingError as e:
-            errord_list.append(DeDrmMissingError(ebook_obj))
+        except exceptions.DeDrmMissingError as e:
+            errord_list.append(exceptions.DeDrmMissingError(ebook_obj))
             continue
-        except (CorruptEbookError, DecryptionFailed) as e:
+        except (exceptions.CorruptEbookError, exceptions.DecryptionFailed) as e:
             errord_list.append(e)
             continue
 
@@ -367,16 +366,16 @@ def remove_drm_from_ebook(config, ebook_obj):
                 config['ebook_cache'].update_ebook_property(ebook_obj.path, drmfree=False)
 
                 if state == DRM.wrong_key:
-                    raise DecryptionFailed(ebook_obj, 'Incorrect key found for ebook')
+                    raise exceptions.DecryptionFailed(ebook_obj, 'Incorrect key found for ebook')
                 elif state == DRM.corrupt:
-                    raise DecryptionFailed(ebook_obj, 'Corrupt ebook found')
+                    raise exceptions.DecryptionFailed(ebook_obj, 'Corrupt ebook found')
                 elif state == DRM.kfxformat:
-                    raise DecryptionFailed(ebook_obj, 'KFX format ebooks are currently unsupported')
+                    raise exceptions.DecryptionFailed(ebook_obj, 'KFX format ebooks are currently unsupported')
                 else:
-                    raise DecryptionFailed(ebook_obj, 'Unknown error in decryption ({})'.format(str(state)))
+                    raise exceptions.DecryptionFailed(ebook_obj, 'Unknown error in decryption ({})'.format(str(state)))
 
     except UnicodeDecodeError as e:
-        raise CorruptEbookError(ebook_obj, 'Unicode filename problem', inner_excp=e)
+        raise exceptions.CorruptEbookError(ebook_obj, 'Unicode filename problem', inner_excp=e)
 
     return decrypted_ebook_obj
 
@@ -393,8 +392,8 @@ def sync_with_server(config, connection, ebooks_by_authortitle):
         # post json dict of ebook data
         data = connection.request('post', data=ebooks_for_sync)
 
-    except RequestError as e:
-        raise SyncError(inner_excp=e)
+    except exceptions.RequestError as e:
+        raise exceptions.SyncError(inner_excp=e)
 
     # display server messages
     for msg in data['messages']:
@@ -435,7 +434,7 @@ def update_local_metadata(config, connection, ebooks_by_filehash, ebooks_to_upda
                 ebook_id=item['ebook_id']
             )
 
-        except (FailedWritingMetaDataError, FailedConfirmError) as e:
+        except (exceptions.FailedWritingMetaDataError, exceptions.FailedConfirmError) as e:
             prntr.error('Failed saving OGRE_ID in {}'.format(ebook_obj.shortpath), excp=e)
             failed += 1
 
@@ -451,8 +450,8 @@ def query_for_uploads(config, connection):
         data = connection.request('to-upload')
         return data['result']
 
-    except RequestError as e:
-        raise FailedUploadsQueryError(inner_excp=e)
+    except exceptions.RequestError as e:
+        raise exceptions.FailedUploadsQueryError(inner_excp=e)
 
 
 def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
@@ -472,10 +471,10 @@ def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
                 },
             )
 
-        except RequestError as e:
-            raise UploadError(ebook_obj, inner_excp=e)
+        except exceptions.RequestError as e:
+            raise exceptions.UploadError(ebook_obj, inner_excp=e)
         except IOError as e:
-            raise UploadError(ebook_obj, inner_excp=e)
+            raise exceptions.UploadError(ebook_obj, inner_excp=e)
 
     # grammatically correct messages are nice
     plural = 's' if len(ebooks_to_upload) > 1 else ''
@@ -496,7 +495,7 @@ def upload_ebooks(config, connection, ebooks_by_filehash, ebooks_to_upload):
         try:
             upload_single_book(connection, ebook_obj)
 
-        except UploadError as e:
+        except exceptions.UploadError as e:
             # record failures for later
             failed_uploads.append(e)
         else:
@@ -534,7 +533,7 @@ def send_logs(connection, errord_list):
         data = connection.request('post-logs', data={'raw_logs':log_data})
 
         if data['result'] != 'ok':
-            raise FailedDebugLogsError('Failed storing the logs, please report this.')
+            raise exceptions.FailedDebugLogsError('Failed storing the logs, please report this.')
         else:
             prntr.info('Uploaded logs to OGRE')
 
@@ -555,5 +554,5 @@ def send_logs(connection, errord_list):
                 i += 1
                 prntr.progressf(num_blocks=i, total_size=len(errord_list))
 
-    except RequestError as e:
-        raise FailedDebugLogsError(inner_excp=e)
+    except exceptions.RequestError as e:
+        raise exceptions.FailedDebugLogsError(inner_excp=e)

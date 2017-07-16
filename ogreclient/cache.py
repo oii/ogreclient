@@ -5,8 +5,8 @@ import json
 import os
 import sqlite3
 
+from . import exceptions
 from .ebook_obj import EbookObject
-from .exceptions import OgreException, MissingFromCacheError, EbookIdDuplicateEbookError
 from .printer import CliPrinter
 
 __CACHEVERSION__ = 1
@@ -94,11 +94,11 @@ class Cache:
                 if file_hash is not None and obj[0] != file_hash:
                     c.execute('DELETE FROM ebooks WHERE path = ?', (path,))
                     conn.commit()
-                    raise MissingFromCacheError
+                    raise exceptions.MissingFromCacheError
             else:
-                raise MissingFromCacheError
+                raise exceptions.MissingFromCacheError
 
-        except MissingFromCacheError as e:
+        except exceptions.MissingFromCacheError as e:
             raise e
         except Exception as e:
             raise CacheReadError(inner_excp=e)
@@ -160,7 +160,7 @@ class Cache:
                 c = conn.cursor()
                 c.execute('SELECT path FROM ebooks WHERE ebook_id = ?', (ebook_obj.ebook_id,))
                 obj = c.fetchone()
-                raise EbookIdDuplicateEbookError(ebook_obj, obj[0])
+                raise exceptions.EbookIdDuplicateEbookError(ebook_obj, obj[0])
             else:
                 raise CacheReadError(inner_excp=e)
         except Exception as e:
@@ -176,7 +176,7 @@ class Cache:
             c.execute('SELECT drmfree FROM ebooks WHERE path = ?', (path,))
             obj = c.fetchone()
             if obj is None:
-                raise MissingFromCacheError
+                raise exceptions.MissingFromCacheError
             else:
                 values = ''
                 params = []
@@ -214,11 +214,11 @@ class Cache:
             conn.close()
 
 
-class CacheInitError(OgreException):
+class CacheInitError(exceptions.OgreException):
     pass
 
-class CacheReadError(OgreException):
+class CacheReadError(exceptions.OgreException):
     pass
 
-class CacheWriteError(OgreException):
+class CacheWriteError(exceptions.OgreException):
     pass
