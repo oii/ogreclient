@@ -324,11 +324,7 @@ def remove_drm_from_ebook(config, ebook_obj):
                 ebook_obj.path, suffix, config['config_dir'], output_dir=ebook_output_path
             )
 
-            if state == DRM.none:
-                # update cache to mark book as drmfree
-                config['ebook_cache'].update_ebook_property(ebook_obj.path, drmfree=True)
-
-            elif state == DRM.decrypted:
+            if state in (DRM.none, DRM.decrypted):
                 # create new ebook_obj for decrypted ebook
                 decrypted_ebook_obj = EbookObject(
                     config=config,
@@ -355,8 +351,12 @@ def remove_drm_from_ebook(config, ebook_obj):
                 # add decrypted book to cache
                 config['ebook_cache'].store_ebook(decrypted_ebook_obj)
 
-                # update existing DRM-scuppered book as skip=True in cache
-                config['ebook_cache'].update_ebook_property(ebook_obj.path, skip=True)
+                if state == DRM.none:
+                    # update cache to mark book as drmfree
+                    config['ebook_cache'].update_ebook_property(ebook_obj.path, drmfree=True)
+                else:
+                    # update existing DRM-scuppered book as skip=True in cache
+                    config['ebook_cache'].update_ebook_property(ebook_obj.path, skip=True)
 
             else:
                 # mark book as having DRM

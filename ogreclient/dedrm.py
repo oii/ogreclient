@@ -73,7 +73,7 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
                 if 'Error serializing pdf' in line:
                     raise DecryptionFailed(out)
 
-        if state == DRM.decrypted:
+        if state in (DRM.none, DRM.decrypted):
             try:
                 # find the filename of the newly decrypted ebook
                 decrypted_filename = next((
