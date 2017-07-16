@@ -153,5 +153,11 @@ class DeDrmMissingError(BaseEbookWarning):
 class DecryptionFailed(BaseEbookWarning):
     pass
 
+class IncorrectKeyFoundError(DecryptionFailed):
+    pass
+
+class AbortSyncDueToBadKey(OgreException):
+    pass
+
 class DecryptionError(BaseEbookWarning):
     pass

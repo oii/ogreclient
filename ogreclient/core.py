@@ -44,8 +44,22 @@ def sync(config):
         for e in scan_errord:
             prntr.error(e.ebook_obj.path, excp=e)
 
-    # 2) remove DRM
-    decrypt_errord = clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash)
+    try:
+        # 2) remove DRM
+        decrypt_errord = clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash)
+
+    except exceptions.AbortSyncDueToBadKey:
+        if 'has_restarted_once' in config:
+            prntr.info('Invalid Kindle error. Continuing without Kindle decryption')
+        else:
+            config['has_restarted_once'] = True
+
+            # delete existing key and restart the sync
+            os.remove(os.path.join(config['config_dir'], 'kindlekey.k4i'))
+
+            prntr.info('Invalid Kindle key detected. Restarting sync.', bold=True)
+            sync(config)
+            return
 
     if decrypt_errord:
         prntr.info('Errors occurred during decryption:')
@@ -272,11 +286,15 @@ def clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash):
 
     i = 0
     cleaned = 0
+    bad_key_count = 0
 
     prntr.info('Ebook directory is {}'.format(config['ebook_home']))
     prntr.info('Decrypting DRM..')
 
     for authortitle, ebook_obj in ebooks_by_authortitle.iteritems():
+        if bad_key_count > 3:
+            raise exceptions.AbortSyncDueToBadKey
+
         # skip if book already DRM free or marked skip
         if ebook_obj.drmfree is True or ebook_obj.skip is True:
             continue
@@ -299,6 +317,10 @@ def clean_all_drm(config, ebooks_by_authortitle, ebooks_by_filehash):
         # record books which failed decryption
         except exceptions.DeDrmMissingError as e:
             errord_list.append(exceptions.DeDrmMissingError(ebook_obj))
+            continue
+        except exceptions.IncorrectKeyFoundError as e:
+            bad_key_count += 1
+            errord_list.append(e)
             continue
         except (exceptions.CorruptEbookError, exceptions.DecryptionFailed) as e:
             errord_list.append(e)
