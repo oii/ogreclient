@@ -35,12 +35,17 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
             elif suffix == '.pdf':
                 moddedrm.decryptpdf(filepath, ebook_convert_path, config_dir)
 
+        # convert output into list of lines
+        lines = []
+        for line in out:
+            lines += line.splitlines()
+
         # decryption state of current book
         state = DRM.unknown
 
         # handle the various outputs from the different decrypt routines
         if suffix == '.epub':
-            for line in out:
+            for line in lines:
                 if ' is not DRMed.' in line:
                     state = DRM.none
                     break
@@ -53,8 +58,9 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
                 elif 'Error while trying to fix epub' in line:
                     state = DRM.corrupt
                     break
+
         elif suffix in ('.mobi', '.azw', '.azw1', '.azw3', '.azw4', '.tpz'):
-            for line in out:
+            for line in lines:
                 if 'This book is not encrypted.' in line:
                     state = DRM.none
                     break
@@ -67,9 +73,10 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
                 elif 'DrmException: No key found' in line:
                     state = DRM.wrong_key
                     break
+
         elif suffix == '.pdf':
             state = DRM.none
-            for line in out:
+            for line in lines:
                 if 'Error serializing pdf' in line:
                     raise DecryptionFailed(out)
 
