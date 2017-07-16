@@ -30,7 +30,9 @@ class ProviderFactory:
         return provider['class'](**kwargs)
 
 class ProviderBase(object):
+    version = None
     needs_scan = True
+
     def __init__(self, friendly=None, config=None):
         self.friendly = friendly
 
@@ -114,8 +116,9 @@ def find_ebook_providers(conf, ignore=None):
                     globals()[func_name](provider)
                     found = True
 
-                except ProviderUnavailableBaseWarning:
-                    pass
+                except ProviderUnavailableBaseWarning as e:
+                    # print app not installed messaging
+                    prntr.debug(e)
                 except ProviderBaseError as e:
                     prntr.error('Failed processing {}'.format(provider.friendly), excp=e)
             else:
@@ -137,6 +140,12 @@ def _handle_home_Darwin(provider):
 
 
 def _handle_kindle_Darwin(provider):
+    try:
+        # extract Kindle version
+        provider.version = plistlib.readPlist('/Applications/Kindle.app/Contents/Info.plist')['CFBundleShortVersionString']
+    except (IOError, KeyError) as e:
+        raise KindleUnavailableWarning('Kindle for Mac not installed')
+
     # search for Kindle prefs on OSX
     plists = [
         os.path.expanduser('~/Library/Containers/com.amazon.Kindle/Data/Library/Preferences/com.amazon.Kindle.plist'),
@@ -172,7 +181,10 @@ def _handle_kindle_Darwin(provider):
                 inner_excp = KindleProviderError(inner_excp=e)
 
     if provider.libpath is None:
-        raise KindleUnavailableWarning(inner_excp=inner_excp)
+        raise KindleUnavailableWarning(
+            'Kindle for Mac is installed, but not setup yet',
+            inner_excp=inner_excp
+        )
 
 
 def _handle_ade_Darwin(provider):
@@ -181,7 +193,7 @@ def _handle_ade_Darwin(provider):
 
     # check OSX ADE path exists
     if not os.path.exists(manifest_path):
-        raise ADEUnavailableWarning
+        raise ADEUnavailableWarning('Adobe Digital Editions not installed')
 
     try:
         def parse_manifest(path):
