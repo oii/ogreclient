@@ -11,7 +11,7 @@ from .printer import CliPrinter
 from .utils import capture, enum, make_temp_directory
 
 
-DRM = enum('unknown', 'decrypted', 'none', 'wrong_key', 'failed', 'corrupt')
+DRM = enum('unknown', 'kfxformat', 'decrypted', 'none', 'wrong_key', 'failed', 'corrupt')
 
 
 prntr = CliPrinter.get_printer()
@@ -57,6 +57,9 @@ def decrypt(filepath, suffix, config_dir, output_dir=None):
             for line in out:
                 if 'This book is not encrypted.' in line:
                     state = DRM.none
+                    break
+                elif 'KFX format detected. This format cannot be decrypted yet.' in line:
+                    state = DRM.kfxformat
                     break
                 elif 'Decryption succeeded' in line:
                     state = DRM.decrypted

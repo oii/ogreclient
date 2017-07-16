@@ -366,8 +366,10 @@ def remove_drm_from_ebook(config, ebook_obj):
                     raise DecryptionFailed(ebook_obj, 'Incorrect key found for ebook')
                 elif state == DRM.corrupt:
                     raise DecryptionFailed(ebook_obj, 'Corrupt ebook found')
+                elif state == DRM.kfxformat:
+                    raise DecryptionFailed(ebook_obj, 'KFX format ebooks are currently unsupported')
                 else:
-                    raise DecryptionFailed(ebook_obj, 'Unknown error in decryption ({})'.format(state))
+                    raise DecryptionFailed(ebook_obj, 'Unknown error in decryption ({})'.format(str(state)))
 
     except UnicodeDecodeError as e:
         raise CorruptEbookError(ebook_obj, 'Unicode filename problem', inner_excp=e)
