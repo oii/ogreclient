@@ -10,11 +10,7 @@ from urlparse import urlparse
 import mock
 import pytest
 
-from ogreclient.core import scan_for_ebooks as func_scan_for_ebooks
-from ogreclient.core import get_definitions as func_get_definitions
 from ogreclient.ebook_obj import EbookObject
-from ogreclient.prereqs import setup_user_auth as func_setup_user_auth
-from ogreclient.prereqs import setup_ebook_home as func_setup_ebook_home
 from ogreclient.printer import CliPrinter
 
 
@@ -95,44 +91,4 @@ def helper_get_ebook(client_config, ebook_lib_path):
         ebook_obj.get_metadata()
         return ebook_obj
 
-    return wrapped
-
-
-@pytest.fixture(scope='function')
-def get_definitions():
-    def wrapped(connection):
-        return func_get_definitions(connection)
-    return wrapped
-
-
-@pytest.fixture(scope='session')
-def search_for_ebooks():
-    def wrapped(client_config):
-        data, _, errord, _ = func_scan_for_ebooks(client_config)
-        return data, errord
-    return wrapped
-
-
-@pytest.fixture(scope='session')
-def setup_user_auth():
-    def wrapped(client_config):
-        # setup fake argparse object
-        fakeargs = collections.namedtuple('fakeargs', ('host', 'username', 'password'))
-        return func_setup_user_auth(
-            fakeargs(None, None, None),
-            client_config
-        )
-    return wrapped
-
-
-@pytest.fixture(scope='session')
-def setup_ebook_home():
-    def wrapped(client_config):
-        # setup fake argparse object
-        fakeargs = collections.namedtuple('fakeargs', ('ebook_home'))
-        _, ebook_home = func_setup_ebook_home(
-            fakeargs(None),
-            client_config
-        )
-        return ebook_home
     return wrapped

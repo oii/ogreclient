@@ -7,11 +7,12 @@ import shutil
 
 import mock
 
+from ogreclient.core import get_definitions, scan_for_ebooks
 from ogreclient.providers import LibProvider
 
 
 @mock.patch('ogreclient.utils.OgreConnection')
-def test_get_definitions(mock_connection, get_definitions, client_config):
+def test_get_definitions(mock_connection, client_config):
     # /definitions endpoint returns json of app's EBOOK_DEFINITIONS config
     mock_connection.request.return_value = [
         ['mobi', True, False],
@@ -32,7 +33,7 @@ def test_get_definitions(mock_connection, get_definitions, client_config):
 
 
 @mock.patch('ogreclient.ebook_obj.subprocess.Popen')
-def test_search(mock_subprocess_popen, search_for_ebooks, client_config, ebook_lib_path, tmpdir):
+def test_search(mock_subprocess_popen, client_config, ebook_lib_path, tmpdir):
     # mock return from Popen().communicate()
     mock_subprocess_popen.return_value.communicate.return_value = (b"Title               : Alice's Adventures in Wonderland\nAuthor(s)           : Lewis Carroll [Carroll, Lewis]\nTags                : Fantasy\nLanguages           : eng\nPublished           : 2008-06-26T14:00:00+00:00\nRights              : Public domain in the USA.\nIdentifiers         : uri:http://www.gutenberg.org/ebooks/11\n", b'')
 
@@ -44,7 +45,7 @@ def test_search(mock_subprocess_popen, search_for_ebooks, client_config, ebook_l
     shutil.copy(os.path.join(ebook_lib_path, 'pg11.epub'), tmpdir.strpath)
 
     # search for ebooks
-    data, errord = search_for_ebooks(client_config)
+    data, _, errord, _ = scan_for_ebooks(client_config)
 
     # verify found book
     assert len(data) == 1
@@ -53,7 +54,7 @@ def test_search(mock_subprocess_popen, search_for_ebooks, client_config, ebook_l
 
 
 @mock.patch('ogreclient.ebook_obj.subprocess.Popen')
-def test_search_ranking(mock_subprocess_popen, search_for_ebooks, client_config, ebook_lib_path, tmpdir):
+def test_search_ranking(mock_subprocess_popen, client_config, ebook_lib_path, tmpdir):
     # mock return from Popen().communicate()
     mock_subprocess_popen.return_value.communicate.return_value = (b"Title               : Alice's Adventures in Wonderland\nAuthor(s)           : Lewis Carroll [Carroll, Lewis]\nTags                : Fantasy\nLanguages           : eng\nPublished           : 2008-06-26T14:00:00+00:00\nRights              : Public domain in the USA.\nIdentifiers         : uri:http://www.gutenberg.org/ebooks/11\n", b'')
 
@@ -66,7 +67,7 @@ def test_search_ranking(mock_subprocess_popen, search_for_ebooks, client_config,
         shutil.copy(os.path.join(ebook_lib_path, book), tmpdir.strpath)
 
     # search for ebooks
-    data, errord = search_for_ebooks(client_config)
+    data, _, errord, _ = scan_for_ebooks(client_config)
 
     # verify found mobi file hash; it is ranked higher than epub
     assert len(data) == 1
