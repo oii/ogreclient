@@ -11,15 +11,13 @@ from urlparse import urlparse
 
 from dedrm import PLUGIN_VERSION as DEDRM_PLUGIN_VERSION
 
-from . import exceptions
-from .cache import Cache
-from .config import write_config
-from .core import get_definitions
-from .dedrm import init_keys
-from .definitions import OGRE_PROD_HOST
-from .printer import CliPrinter
-from .providers import PROVIDERS, find_ebook_providers
-from .utils import OgreConnection
+from ogreclient import exceptions, OGRE_PROD_HOST
+from ogreclient.config import deserialize_defs, write_config
+from ogreclient.providers import PROVIDERS, find_ebook_providers
+from ogreclient.utils.cache import Cache
+from ogreclient.utils.connection import OgreConnection
+from ogreclient.utils.dedrm import init_keys
+from ogreclient.utils.printer import CliPrinter
 
 
 prntr = CliPrinter.get_printer()
@@ -51,6 +49,18 @@ def setup_ogreclient(args, conf):
 
     # return config object
     return conf
+
+
+def get_definitions(connection):
+    try:
+        # retrieve the ebook format definitions
+        data = connection.request('definitions')
+
+        # convert list of lists result into OrderedDict
+        return deserialize_defs(data)
+
+    except exceptions.RequestError as e:
+        raise exceptions.FailedGettingDefinitionsError(inner_excp=e)
 
 
 def check_calibre_exists(conf):

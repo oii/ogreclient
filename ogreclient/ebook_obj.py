@@ -9,8 +9,8 @@ import sys
 
 from urllib2 import HTTPError, URLError
 
-from . import exceptions
-from .utils import compute_md5, id_generator, make_temp_directory
+from ogreclient import exceptions
+from ogreclient.utils import compute_md5, id_generator, make_temp_directory
 
 
 class EbookObject:

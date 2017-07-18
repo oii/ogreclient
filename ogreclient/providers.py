@@ -11,11 +11,11 @@ import urlparse
 
 from xml.dom import minidom
 
-from .exceptions import (ProviderBaseError, KindleProviderError, ADEProviderError,
-                         ProviderUnavailableBaseWarning, KindleUnavailableWarning,
-                         ADEUnavailableWarning, EbookHomeUnavailableWarning)
-from .printer import CliPrinter
-from .utils import make_temp_directory
+from ogreclient.exceptions import (ProviderBaseError, KindleProviderError, ADEProviderError,
+                                   ProviderUnavailableBaseWarning, KindleUnavailableWarning,
+                                   ADEUnavailableWarning, EbookHomeUnavailableWarning)
+from ogreclient.utils import make_temp_directory
+from ogreclient.utils.printer import CliPrinter
 
 
 prntr = CliPrinter.get_printer()

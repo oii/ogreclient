@@ -6,9 +6,9 @@ import os
 from dedrm import adobekey, kindlekey
 from dedrm import scriptinterface as moddedrm
 
-from . import exceptions
-from .printer import CliPrinter
-from .utils import capture, enum, make_temp_directory
+from ogreclient import exceptions
+from ogreclient.utils import capture, enum, make_temp_directory
+from ogreclient.utils.printer import CliPrinter
 
 
 DRM = enum('unknown', 'kfxformat', 'decrypted', 'none', 'wrong_key', 'failed', 'corrupt')

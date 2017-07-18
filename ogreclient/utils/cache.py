@@ -5,9 +5,9 @@ import json
 import os
 import sqlite3
 
-from . import exceptions
-from .ebook_obj import EbookObject
-from .printer import CliPrinter
+from ogreclient import exceptions
+from ogreclient.ebook_obj import EbookObject
+from ogreclient.utils.printer import CliPrinter
 
 __CACHEVERSION__ = 1
 

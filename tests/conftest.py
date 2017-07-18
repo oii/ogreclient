@@ -11,7 +11,7 @@ import mock
 import pytest
 
 from ogreclient.ebook_obj import EbookObject
-from ogreclient.printer import CliPrinter
+from ogreclient.utils.printer import CliPrinter
 
 
 @pytest.fixture(scope='function')

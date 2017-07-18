@@ -5,27 +5,16 @@ from __future__ import division
 import os
 import shutil
 
-from . import exceptions
-from .ebook_obj import EbookObject
-from .utils import OgreConnection, deserialize_defs, make_temp_directory, retry
-from .printer import CliPrinter
-from .providers import LibProvider, PathsProvider
-from .dedrm import decrypt, DRM
+from ogreclient import exceptions
+from ogreclient.ebook_obj import EbookObject
+from ogreclient.providers import LibProvider, PathsProvider
+from ogreclient.utils import make_temp_directory, retry
+from ogreclient.utils.connection import OgreConnection
+from ogreclient.utils.dedrm import decrypt, DRM
+from ogreclient.utils.printer import CliPrinter
 
 
 prntr = CliPrinter.get_printer()
-
-
-def get_definitions(connection):
-    try:
-        # retrieve the ebook format definitions
-        data = connection.request('definitions')
-
-        # convert list of lists result into OrderedDict
-        return deserialize_defs(data)
-
-    except exceptions.RequestError as e:
-        raise exceptions.FailedGettingDefinitionsError(inner_excp=e)
 
 
 def sync(config):

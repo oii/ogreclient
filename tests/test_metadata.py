@@ -114,7 +114,7 @@ def test_metadata_dedrm(helper_get_ebook, ebook_lib_path, tmpdir):
 
 
 @pytest.mark.requires_calibre
-@mock.patch('ogreclient.utils.OgreConnection')
+@mock.patch('ogreclient.utils.connection.OgreConnection')
 def test_metadata_ogreid_epub(mock_connection, helper_get_ebook, ebook_lib_path, tmpdir):
     # mock return from urlopen().read()
     mock_connection.request.return_value = {'result': 'ok'}
@@ -137,7 +137,7 @@ def test_metadata_ogreid_epub(mock_connection, helper_get_ebook, ebook_lib_path,
 
 
 @pytest.mark.requires_calibre
-@mock.patch('ogreclient.utils.OgreConnection')
+@mock.patch('ogreclient.utils.connection.OgreConnection')
 def test_metadata_ogreid_mobi(mock_connection, helper_get_ebook, ebook_lib_path, tmpdir):
     # mock return from urlopen().read()
     mock_connection.request.return_value = {'result': 'ok'}
@@ -164,7 +164,7 @@ def test_metadata_ogreid_mobi(mock_connection, helper_get_ebook, ebook_lib_path,
 
 
 @pytest.mark.requires_calibre
-@mock.patch('ogreclient.utils.OgreConnection')
+@mock.patch('ogreclient.utils.connection.OgreConnection')
 def test_metadata_ogreid_pdf(mock_connection, helper_get_ebook, ebook_lib_path, tmpdir):
     # mock return from urlopen().read()
     mock_connection.request.return_value = {'result': 'ok'}
@@ -191,7 +191,7 @@ def test_metadata_ogreid_pdf(mock_connection, helper_get_ebook, ebook_lib_path, 
 
 
 @pytest.mark.requires_calibre
-@mock.patch('ogreclient.utils.OgreConnection')
+@mock.patch('ogreclient.utils.connection.OgreConnection')
 def test_metadata_ogreid_azw3(mock_connection, helper_get_ebook, ebook_lib_path, tmpdir):
     # mock return from urlopen().read()
     mock_connection.request.return_value = {'result': 'ok'}

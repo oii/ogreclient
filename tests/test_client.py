@@ -7,11 +7,12 @@ import shutil
 
 import mock
 
-from ogreclient.core import get_definitions, scan_for_ebooks
+from ogreclient.core import scan_for_ebooks
+from ogreclient.prereqs import get_definitions
 from ogreclient.providers import LibProvider
 
 
-@mock.patch('ogreclient.utils.OgreConnection')
+@mock.patch('ogreclient.utils.connection.OgreConnection')
 def test_get_definitions(mock_connection, client_config):
     # /definitions endpoint returns json of app's EBOOK_DEFINITIONS config
     mock_connection.request.return_value = [

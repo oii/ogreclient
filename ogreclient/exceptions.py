@@ -1,6 +1,21 @@
 from __future__ import unicode_literals
 
-from .printer import CoreException
+import sys
+import traceback
+
+
+class CoreException(Exception):
+    def __init__(self, message=None, inner_excp=None):
+        super(CoreException, self).__init__(message)
+        self.inner_excp = inner_excp
+
+        # extract traceback from inner_excp
+        if inner_excp is not None:
+            # this is not guaranteed to work since sys.exc_info() gets only
+            # the _most recent_ exception
+            _, _, tb = sys.exc_info()
+            if tb is not None:
+                self.inner_traceback = ''.join(traceback.format_tb(tb))[:-1]
 
 
 class OgreException(CoreException):
@@ -114,7 +129,7 @@ class EbookHomeUnavailableWarning(ProviderUnavailableBaseWarning):
 class DuplicateEbookBaseError(OgreWarning):
     def __init__(self, kind, ebook_obj, path2):
         super(DuplicateEbookBaseError, self).__init__(
-            u"Duplicate ebook found ({}) '{}':\n  {}\n  {}".format(kind, ebook_obj.path, path2)
+            "Duplicate ebook found ({}) '{}':\n  {}\n  {}".format(kind, ebook_obj.path, path2)
         )
 
 class ExactDuplicateEbookError(DuplicateEbookBaseError):

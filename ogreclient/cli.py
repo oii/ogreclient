@@ -6,14 +6,14 @@ import logging
 import os
 import sys
 
-from . import __version__, exceptions
-from .config import read_config
-from .core import scan_and_show_stats, sync
-from .dedrm import decrypt, DRM, DecryptionError
-from .ebook_obj import EbookObject
-from .prereqs import setup_ogreclient
-from .printer import CliPrinter
-from .providers import PROVIDERS
+from ogreclient import __version__, exceptions
+from ogreclient.config import read_config
+from ogreclient.core import scan_and_show_stats, sync
+from ogreclient.dedrm import decrypt, DRM, DecryptionError
+from ogreclient.ebook_obj import EbookObject
+from ogreclient.prereqs import setup_ogreclient
+from ogreclient.providers import PROVIDERS
+from ogreclient.utils.printer import CliPrinter
 
 
 prntr = CliPrinter.get_printer()

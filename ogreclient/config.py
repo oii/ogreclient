@@ -1,14 +1,14 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import collections
 import ConfigParser
 import json
 import os
 import platform
 from urlparse import urlunparse
 
-from .providers import PROVIDERS, ProviderFactory
-from .utils import serialize_defs, deserialize_defs
+from ogreclient.providers import PROVIDERS, ProviderFactory
 
 
 def _get_config_dir():
@@ -106,3 +106,18 @@ def read_config():
     )
 
     return conf
+
+
+def serialize_defs(definitions):
+    return json.dumps([
+        [k, v.is_valid_format, v.is_non_fiction]
+        for k,v in definitions.iteritems()
+    ])
+
+def deserialize_defs(data):
+    # namedtuple used for definition entries
+    FormatConfig = collections.namedtuple('FormatConfig', ('is_valid_format', 'is_non_fiction'))
+
+    return collections.OrderedDict(
+        [(v[0], FormatConfig(v[1], v[2])) for v in data]
+    )
