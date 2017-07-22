@@ -8,11 +8,11 @@ import sys
 
 from ogreclient import __version__, exceptions
 from ogreclient.config import read_config
-from ogreclient.core import scan_and_show_stats, sync
-from ogreclient.dedrm import decrypt, DRM, DecryptionError
-from ogreclient.ebook_obj import EbookObject
+from ogreclient.core.ebook_obj import EbookObject
+from ogreclient.main import scan_and_show_stats, sync
 from ogreclient.prereqs import setup_ogreclient
 from ogreclient.providers import PROVIDERS
+from ogreclient.utils.dedrm import decrypt, DRM
 from ogreclient.utils.printer import CliPrinter
 
 
@@ -252,7 +252,7 @@ def dedrm_single_ebook(conf, inputfile, output_dir):
         )
         prntr.info('Book decrypted at:', extra=decrypted_filepath, success=True)
 
-    except DecryptionError as e:
+    except exceptions.DecryptionError as e:
         prntr.info(str(e))
         state = None
 

@@ -10,7 +10,7 @@ from urlparse import urlparse
 import mock
 import pytest
 
-from ogreclient.ebook_obj import EbookObject
+from ogreclient.core.ebook_obj import EbookObject
 from ogreclient.utils.printer import CliPrinter
 
 
