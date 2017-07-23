@@ -105,7 +105,7 @@ class Cache:
         finally:
             conn.close()
 
-        return EbookObject.deserialize(self.config, path, obj)
+        return EbookObject.deserialize(path, obj)
 
 
     def store_ebook(self, ebook_obj):

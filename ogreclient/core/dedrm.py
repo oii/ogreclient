@@ -85,7 +85,6 @@ def remove_drm_from_ebook(config, ebook_obj):
             if state in (DRM.none, DRM.decrypted):
                 # create new ebook_obj for decrypted ebook
                 decrypted_ebook_obj = EbookObject(
-                    config=config,
                     filepath=decrypted_filepath,
                     source=ebook_obj.meta['source']
                 )

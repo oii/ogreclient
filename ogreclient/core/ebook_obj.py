@@ -18,8 +18,8 @@ class EbookObject:
     calibre_ebook_meta_bin = None
 
 
-    def __init__(self, config, filepath, file_hash=None, ebook_id=None, size=None, authortitle=None, fmt=None, drmfree=False, skip=False, source=None):
-        self.config = config
+    def __init__(self, filepath, file_hash=None, ebook_id=None, size=None, authortitle=None,
+                 fmt=None, drmfree=False, skip=False, source=None):
         self.path = filepath
         self.file_hash = file_hash
         self.ebook_id = ebook_id
@@ -59,7 +59,7 @@ class EbookObject:
 
 
     @staticmethod
-    def deserialize(config, path, cached_obj):
+    def deserialize(path, cached_obj):
         '''
         Deserialize from a cached object into an EbookObject
         '''
@@ -69,7 +69,6 @@ class EbookObject:
 
         # return an EbookObject
         ebook_obj = EbookObject(
-            config=config,
             filepath=path,
             file_hash=cached_obj[0],
             ebook_id=cached_obj[1],

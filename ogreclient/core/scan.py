@@ -67,7 +67,6 @@ def scan_for_ebooks(config):
         except exceptions.MissingFromCacheError:
             # init the EbookObject
             ebook_obj = EbookObject(
-                config=config,
                 filepath=item[0],
                 fmt=item[1],
                 source=item[2],
