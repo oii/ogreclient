@@ -12,6 +12,7 @@ from urlparse import urlparse
 from dedrm import PLUGIN_VERSION as DEDRM_PLUGIN_VERSION
 
 from ogreclient import exceptions, OGRE_PROD_HOST
+from ogreclient.core.ebook_obj import EbookObject
 from ogreclient.config import deserialize_defs, write_config
 from ogreclient.providers import PROVIDERS, find_ebook_providers
 from ogreclient.utils.cache import Cache
@@ -99,8 +100,11 @@ def check_calibre_exists(conf):
         if not calibre_ebook_meta_bin:
             raise exceptions.CalibreNotAvailable('You must install Calibre in order to use ogreclient.')
 
-        # init the config dict
+        # store in config for next run
         conf['calibre_ebook_meta_bin'] = calibre_ebook_meta_bin
+
+    # make accessible as class variable on EbookObject
+    EbookObject.calibre_ebook_meta_bin = conf['calibre_ebook_meta_bin']
 
 
 def setup_ogreserver_connection_and_get_definitions(args, conf):
@@ -146,6 +150,9 @@ def setup_providers(args, conf):
     Validate OGRE_HOME and ebooks providers (kindle etc) on the local machine
     '''
     ebook_home_found, conf['ebook_home'] = setup_ebook_home(args, conf)
+
+    # make accessible as class variable on EbookObject
+    EbookObject.ebook_home = conf['ebook_home']
 
     if not os.path.exists(conf['ebook_home']):
         raise exceptions.EbookHomeMissingError("Path specified in OGRE_HOME doesn't exist!")

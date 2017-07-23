@@ -22,6 +22,10 @@ def client_config(calibre_ebook_meta_bin):
     # no fancy printing during tests
     CliPrinter.init(quiet=True)
 
+    # setup class vars on EbookObject
+    EbookObject.calibre_ebook_meta_bin = calibre_ebook_meta_bin
+    EbookObject.ebook_home = None
+
     FormatConfig = collections.namedtuple('FormatConfig', ('is_valid_format', 'is_non_fiction'))
     return {
         'config_dir': None,

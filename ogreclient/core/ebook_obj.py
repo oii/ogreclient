@@ -14,6 +14,10 @@ from ogreclient.utils import compute_md5, id_generator, make_temp_directory
 
 
 class EbookObject:
+    ebook_home = None
+    calibre_ebook_meta_bin = None
+
+
     def __init__(self, config, filepath, file_hash=None, ebook_id=None, size=None, authortitle=None, fmt=None, drmfree=False, skip=False, source=None):
         self.config = config
         self.path = filepath
@@ -47,7 +51,7 @@ class EbookObject:
 
     @property
     def shortpath(self):
-        return self.path[len(self.config['ebook_home'])+1:]
+        return self.path[len(EbookObject.ebook_home)+1:]
 
     @property
     def safe_name(self):
@@ -130,7 +134,7 @@ class EbookObject:
         # call ebook-metadata
         proc = subprocess.Popen(
             '{} "{}"'.format(
-                self.config['calibre_ebook_meta_bin'], self.path.replace('"', '\\"')
+                EbookObject.calibre_ebook_meta_bin, self.path.replace('"', '\\"')
             ).encode(fs_encoding),
             shell=True,
             stdout=subprocess.PIPE,
@@ -323,7 +327,7 @@ class EbookObject:
 
         # write ogre_id to --tags
         subprocess.check_output(
-            [self.config['calibre_ebook_meta_bin'], temp_file_path, '--tags', new_tags],
+            [EbookObject.calibre_ebook_meta_bin, temp_file_path, '--tags', new_tags],
             stderr=subprocess.STDOUT
         )
 
@@ -332,7 +336,7 @@ class EbookObject:
         # write ogre_id to identifier metadata
         subprocess.check_output(
             [
-                self.config['calibre_ebook_meta_bin'],
+                EbookObject.calibre_ebook_meta_bin,
                 temp_file_path,
                 '--identifier',
                 'ogre_id:{}'.format(self.ebook_id)
@@ -369,7 +373,7 @@ class EbookObject:
 
                 # write DeDRM to --tags
                 subprocess.check_output(
-                    [self.config['calibre_ebook_meta_bin'], tmp_name, '--tags', new_tags],
+                    [EbookObject.calibre_ebook_meta_bin, tmp_name, '--tags', new_tags],
                     stderr=subprocess.STDOUT
                 )
 
