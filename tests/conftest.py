@@ -88,8 +88,8 @@ def helper_get_ebook(client_config, ebook_lib_path):
     def wrapped(filename, basepath=None):
         # ebook_obj creation helper
         ebook_obj = EbookObject(
-            config=client_config,
-            filepath=os.path.join(basepath, filename) if basepath else os.path.join(ebook_lib_path, filename),
+            filepath=os.path.join(basepath, filename) \
+                if basepath else os.path.join(ebook_lib_path, filename),
             source='TEST'
         )
         ebook_obj.get_metadata()

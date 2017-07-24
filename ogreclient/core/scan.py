@@ -13,20 +13,52 @@ prntr = CliPrinter.get_printer()
 
 
 def scan_for_ebooks(config):
+    """
+    Scan for ebooks with configured providers.
+
+    params:
+        config: dict
+    """
+    ebooks = _find_ebooks(config['providers'], config['definitions'], config['verbose'])
+
+    prntr.info('Discovered {} files'.format(len(ebooks)), bold=True)
+    if len(ebooks) == 0:
+        raise exceptions.NoEbooksError
+
+    return _process_ebooks(
+        ebooks,
+        config['ebook_cache'],
+        config['definitions'],
+        skip_cache=config['skip_cache'],
+        verbose=config['verbose']
+    )
+
+
+def _find_ebooks(providers, definitions, verbose=False):
+    """
+    Find ebooks in directories given by providers.
+
+    params:
+        providers: dict
+        definitions: dict
+        verbose: bool
+    returns:
+        list of tuple (path, suffix, provider_name)
+    """
     ebooks = []
 
     def _process_filename(filename, provider_name):
         fn, ext = os.path.splitext(filename)
         # check file not hidden, is in list of known file suffixes
-        if fn[1:1] != '.' and ext[1:] in config['definitions'].keys():
+        if fn[1:1] != '.' and ext[1:] in definitions.keys():
             ebooks.append(
                 (os.path.join(root, filename), ext[1:], provider_name)
             )
 
-    for provider in config['providers'].itervalues():
+    for provider in providers.itervalues():
         # a LibProvider contains a single directory containing ebooks
         if isinstance(provider, LibProvider):
-            if config['debug']:
+            if verbose:
                 prntr.info('Scanning {} in {}'.format(provider.friendly, provider.libpath))
 
             for root, _, files in os.walk(provider.libpath):
@@ -35,17 +67,29 @@ def scan_for_ebooks(config):
 
         # a PathsProvider contains a list of direct ebook paths
         elif isinstance(provider, PathsProvider):
-            if config['debug']:
+            if verbose:
                 prntr.info('Scanning {}'.format(provider.friendly))
 
             for path in provider.paths:
                 _process_filename(filename, provider.friendly)
 
+    return ebooks
+
+
+def _process_ebooks(ebooks, ebook_cache, definitions, skip_cache=False, verbose=False):
+    """
+    Process found ebook tuples into EbookObjects, using application cache.
+    Extract metadata and calculate MD5 checksums.
+
+    params:
+        ebooks: list of tuple from `_find_ebooks`
+        ebook_cache: Cache object
+        definitions: dict
+        skip_cache: bool
+        verbose: bool
+    """
     i = 0
     skipped = 0
-    prntr.info('Discovered {} files'.format(len(ebooks)), bold=True)
-    if len(ebooks) == 0:
-        raise exceptions.NoEbooksError
 
     prntr.info('Scanning ebook meta data..')
     ebooks_by_authortitle = {}
@@ -53,16 +97,16 @@ def scan_for_ebooks(config):
     errord_list = []
 
     for item in ebooks:
-        if config['verbose']:
+        if verbose:
             prntr.info('Meta data scanning {}'.format(item[0]))
 
         try:
             # optionally skip the cache
-            if config['skip_cache'] is True:
+            if skip_cache is True:
                 raise exceptions.MissingFromCacheError
 
             # get ebook from the cache
-            ebook_obj = config['ebook_cache'].get_ebook(path=item[0])
+            ebook_obj = ebook_cache.get_ebook(path=item[0])
 
         except exceptions.MissingFromCacheError:
             # init the EbookObject
@@ -85,7 +129,7 @@ def scan_for_ebooks(config):
 
                 # add book to the cache as a skip
                 ebook_obj.skip = True
-                config['ebook_cache'].store_ebook(ebook_obj)
+                ebook_cache.store_ebook(ebook_obj)
 
         # skip previously scanned books which are marked skip (DRM'd or duplicates)
         if ebook_obj.skip:
@@ -115,8 +159,8 @@ def scan_for_ebooks(config):
 
             if ebook_obj.authortitle in ebooks_by_authortitle.keys():
                 # compare the rank of the format already found against this one
-                existing_rank = config['definitions'].keys().index(ebooks_by_authortitle[ebook_obj.authortitle].format)
-                new_rank = config['definitions'].keys().index(ebook_obj.format)
+                existing_rank = definitions.keys().index(ebooks_by_authortitle[ebook_obj.authortitle].format)
+                new_rank = definitions.keys().index(ebook_obj.format)
 
                 # lower is better
                 if new_rank < existing_rank:
@@ -136,14 +180,14 @@ def scan_for_ebooks(config):
 
         try:
             # add book to the cache
-            config['ebook_cache'].store_ebook(ebook_obj)
+            ebook_cache.store_ebook(ebook_obj)
 
         except exceptions.EbookIdDuplicateEbookError as e:
             # handle duplicate books with same ebook_id in metadata
             errord_list.append(e)
 
         i += 1
-        if config['verbose'] is False:
+        if verbose is False:
             prntr.progressf(num_blocks=i, total_size=len(ebooks))
 
     if len(ebooks_by_authortitle) == 0:
